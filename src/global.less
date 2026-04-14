@@ -1,0 +1,64 @@
+@font-face {
+  font-weight: normal;
+  font-family: 'Baloo Bhaina';
+  font-style: normal;
+  src: url('/fonts/BalooBhaina-Regular.woff2') format('woff2'),
+    url('/fonts/BalooBhaina-Regular.woff') format('woff');
+  font-display: swap;
+}
+
+html,
+body {
+  color: #fff;
+  font-family: 'SF Pro SC', 'SF Pro Display', 'SF Pro Icons', 'PingFang SC',
+    'Helvetica Neue', Helvetica, Arial, sans-serif;
+  background-color: #090723;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+
+  .ant-spin-nested-loading .ant-spin-container::after {
+    background-color: #090723;
+  }
+
+  .ant-spin-nested-loading .ant-spin-blur::after {
+    opacity: 1;
+  }
+
+  // 去除谷歌地图logo
+  a[href^="http://maps.google.com/maps"]
+  {
+    display: none !important;
+  }
+  a[href^="https://maps.google.com/maps"]
+  {
+    display: none !important;
+  }
+
+  .gmnoprint a,
+  .gmnoprint span,
+  .gm-style-cc {
+    display: none;
+  }
+}
+
+.ant-pro-layout-top {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 100%;
+
+  > .ant-layout {
+    flex: 1 1 auto;
+
+    > .ant-pro-layout-container {
+      flex: 1 1 auto;
+    }
+  }
+}
+
+.ant-message-top {
+  top: 20vh !important;
+}

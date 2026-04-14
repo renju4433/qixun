@@ -1,0 +1,70 @@
+.commentForm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.editorContainer {
+  position: relative;
+}
+
+.commentEditor {
+  min-height: 80px;
+  padding: 8px;
+  border: 1px solid #303030;
+  border-radius: 6px;
+  background: #1b1b1b;
+  color: #f0f0f0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  outline: none;
+}
+
+.commentEditor:empty:before {
+  content: attr(data-placeholder);
+  color: #777;
+}
+
+.mentionPopup {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  width: 100%;
+  max-height: 240px;
+  overflow-y: auto;
+  background: #242424;
+  border: 1px solid #303030;
+  border-radius: 6px;
+  z-index: 10;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+}
+
+.mentionUserItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  cursor: pointer;
+}
+
+.mentionUserItem:hover {
+  background: #2f2f2f;
+}
+
+.mentionUserName {
+  color: #f0f0f0;
+}
+
+.mentionTag {
+  color: #5aa7ff;
+  background: rgba(90, 167, 255, 0.15);
+  border-radius: 4px;
+  padding: 0 4px;
+}
+
+.mentionHighlight {
+  color: #5aa7ff;
+  cursor: pointer;
+}

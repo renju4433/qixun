@@ -1,0 +1,254 @@
+.wrapper {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+
+  .videoBackground {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0.4;
+    }
+  }
+
+  .dailyChallengeContainer {
+    // display: flex;
+    position: relative;
+    width: 100%;
+    min-height: 100vh;
+    background-color: rgba(9, 7, 35, 100%);
+
+    main {
+      display: flex;
+      flex: 1 1 auto;
+      flex-direction: column;
+      align-items: center;
+      margin: 0 auto;
+      padding: 0 1rem;
+    }
+
+    .dailyChallengeTitle {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      max-width: 620px;
+      height: auto;
+      padding-top: 3rem;
+
+      .challengeDate {
+        :global {
+          .ant-badge-count {
+            height: 1.6rem;
+            color: #fff;
+            font-size: 1rem;
+            line-height: 1.95rem;
+            letter-spacing: 1px;
+            background-color: #00000000;
+            border-radius: 1rem;
+            box-shadow: none;
+          }
+        }
+      }
+
+      h2 {
+        color: #fff;
+        font-weight: 700;
+        font-size: 2.5rem;
+      }
+
+      > p {
+        color: rgba(255, 255, 255, 60%);
+        font-size: 0.75rem;
+        line-height: 1.25rem;
+        transition: opacity 0.3s ease-out;
+      }
+
+      .challengers {
+        font-size: 1rem;
+
+        span {
+          color: #fff;
+          font-size: 1.2rem;
+          opacity: 1;
+          padding-inline: 5px;
+        }
+      }
+
+      > button {
+        height: auto;
+        box-shadow: 0 1rem 1rem rgba(0, 0, 0, 25%);
+        padding-inline: 2rem;
+        padding-block: 0.5rem;
+
+        &.resumeButton {
+          background-color: #13c2c2;
+
+          &:hover {
+            background-color: #08979c;
+          }
+
+          &:active {
+            background-color: #006d75;
+          }
+        }
+      }
+    }
+    .newYear {
+      width: 100%;
+      font-size: 24px;
+      text-align: center;
+      .hint {
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+        color: gray;
+        font-size: 13px;
+      }
+      .first {
+        color: #FF3653;
+        font-size: 36px;
+      }
+      .second {
+        // color: #fa8b16;
+        color: white;
+      }
+      .third {
+        color: grey;
+        font-size: 16px;
+      }
+    }
+    .drawContainer {
+      align-items: center;
+      width: 100%;
+      text-align: center;
+      .title {
+        font-size: 20px;
+      }
+      .desc {
+        color: gray;
+        font-size: 14px;
+      }
+      .button {
+      }
+      .ok {
+        color: green;
+        font-size: 20px;
+      }
+      .not_ok {
+        color: white;
+        font-size: 20px;
+      }
+    }
+    .dailyChallengeType {
+      display: flex;
+      gap: 2rem;
+      margin-block-end: 2rem;
+    }
+
+    .dailyChallengeTypeContainer {
+      position: relative;
+      display: flex;
+      gap: 5px;
+      align-items: center;
+      justify-content: start;
+      max-width: 20rem;
+      padding: 0.5rem 3rem;
+      background-color: rgba(255, 255, 255, 20%);
+      border-radius: 5rem;
+      box-shadow: 0 1rem 1rem rgba(0, 0, 0, 25%);
+      transition: all 0.3s ease-out;
+
+      .typeImage {
+        width: 4rem;
+        height: 4rem;
+        overflow: hidden;
+        border-radius: 3rem;
+
+        img {
+          height: 4rem;
+        }
+      }
+
+      .typeDescription {
+        .optionName {
+          color: #fff;
+          font-size: 1.5rem;
+          text-align: center;
+          padding-block: 4px;
+        }
+
+        .optionEnName {
+          color: rgba(255, 255, 255, 80%);
+          text-align: center;
+        }
+      }
+
+      &:hover {
+        outline: 2px solid #fa8c16;
+      }
+
+      &.active {
+        outline: 2px solid #fa8c16;
+      }
+    }
+  }
+}
+
+@media only screen and (max-width: 679px) {
+  .wrapper {
+    .dailyChallengeContainer {
+      .dailyChallengeType {
+        gap: 1rem;
+        margin-block-end: 2rem;
+      }
+
+      .newYear {
+        font-size: 16px;
+        .first {
+          font-size: 20px;
+        }
+      }
+
+      .dailyChallengeTypeContainer {
+        padding: 0.5rem 1.5rem;
+
+        .typeImage {
+          width: 2.5rem;
+          height: 2.5rem;
+          border-radius: 3rem;
+
+          img {
+            height: 2.5rem;
+          }
+        }
+
+        .typeDescription {
+          .optionName {
+            font-size: 1rem;
+          }
+
+          .optionEnName {
+            font-size: 0.5rem;
+          }
+        }
+      }
+
+      :global {
+        .ant-ribbon {
+          background: transparent;
+          inset-block-start: 3rem;
+          inset-block-end: -1.5rem;
+          inset-inline-end: 2rem;
+
+          .ant-ribbon-corner {
+            display: none;
+          }
+        }
+      }
+    }
+  }
+}

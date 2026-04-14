@@ -1,0 +1,125 @@
+.home {
+  position: fixed;
+  z-index: 0;
+  width: 100%;
+  height: 100vh;
+  background-color: #090723;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+}
+.homePage {
+  z-index: 2;
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  .header {
+    margin-top: 20px;
+  }
+  .container {
+    max-width: 1000px;
+    margin: 0 auto;
+    margin-bottom: 2rem;
+    .activities {
+      padding-top: 1rem;
+      display: inline-block;
+      .activity {
+        padding-bottom: 1rem;
+        color: white;
+        font-size: 14px;
+        text-decoration: underline;
+        cursor: pointer;
+        transition: all 0.1s ease-in-out;
+        // 设置变换的基准点为元素左边中心
+        transform-origin: left center;
+        &:hover {
+          color: #fa8c16;
+          transform: scale(1.03);
+        }
+      }
+    }
+    .first {
+      display: grid;
+      grid-gap: 2rem;
+      grid-template-columns: repeat(2, 1fr);
+      div {
+        text-align: center;
+      }
+      .card {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2.5rem 0;
+        font-size: 1.5rem;
+        background-color: #395f8bdd;
+        border-radius: 20px;
+        cursor: pointer;
+        transition: all 0.1s ease-in-out;
+        &:hover {
+          color: #fa8c16;
+          outline: 2px solid #fa8c16;
+          transform: scale(1.03);
+          background-image: linear-gradient(135deg, #395f8bdd 0%, #2c4a6e 100%);
+        }
+      }
+    }
+
+    .seperate {
+      height: 30px;
+    }
+    .second,
+    .third {
+      .header {
+        font-size: 1.5rem;
+      }
+      .body {
+        display: grid;
+        grid-gap: 1rem;
+        grid-template-columns: repeat(4, 1fr);
+        padding-top: 1rem;
+        div {
+          text-align: center;
+        }
+        .card {
+          padding: 1.5rem 0;
+          font-size: 20px;
+          background-color: #395f8bdd;
+          border-radius: 10px;
+          cursor: pointer;
+          transition: all 0.1s ease-in-out;
+          &:hover {
+            color: #fa8c16;
+            outline: 2px solid #fa8c16;
+            transform: scale(1.03);
+          }
+        }
+      }
+    }
+    .footer {
+      margin-top: 2rem;
+      font-size: 12px;
+      p {
+        margin: 2px;
+        padding: 0;
+      }
+    }
+  }
+}
+
+@media only screen and (max-width: 679px) {
+  .homePage {
+    .container {
+      max-width: 90%;
+      .first {
+        grid-gap: 1rem;
+        grid-template-columns: repeat(1, 1fr);
+      }
+      .second,
+      .third {
+        .body {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+    }
+  }
+}

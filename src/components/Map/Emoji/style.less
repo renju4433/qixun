@@ -1,0 +1,57 @@
+.emoji {
+  position: fixed;
+  z-index: 1000;
+  margin-top: 30vh;
+  margin-left: 24px;
+  .message {
+    pointer-events: none;
+    .userName {
+      padding: 2px 5px;
+      background-color: #00000010;
+    }
+    .emojiItem {
+      width: 80px;
+      height: 80px;
+      object-fit: contain;
+    }
+  }
+}
+
+.settingControl {
+  button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    min-width: auto;
+    height: 40px;
+    color: #fff;
+    font-size: 24px;
+    background: #090723;
+    border: 0;
+    border-radius: 24px;
+    outline: none;
+    cursor: pointer;
+
+    &:hover {
+      color: #fff;
+      background-color: #595959;
+    }
+
+    &:active {
+      color: #fff;
+      background-color: #434343;
+    }
+  }
+}
+
+@media only screen and (max-width: 768px) {
+  .emoji {
+    .message {
+      .emojiItem {
+        width: 60px;
+        height: 60px;
+      }
+    }
+  }
+}

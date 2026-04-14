@@ -1,0 +1,60 @@
+.table-wrapper {
+  width: 96vw;
+  margin: 2rem 0 2rem calc(-48vw + 50%);
+  padding: 0 1rem;
+  box-sizing: border-box;
+}
+
+.table {
+  width: 100% !important;
+  margin: 0 auto !important;
+}
+
+.table tr {
+  padding: 5 !important;
+}
+
+.table td {
+  padding: 5 !important;
+}
+
+.landscape-warning {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: 80%;
+  padding: 10px;
+  color: #333;
+  font-size: 16px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  transform: translate(-50%, -50%);
+}
+
+/* 移动端适配 */
+@media only screen and (max-width: 768px) {
+  .table-wrapper {
+    width: 100%;
+    margin: 1rem 0;
+    overflow-x: auto;
+  }
+
+  .table {
+    width: 100% !important;
+    min-width: 600px;
+  }
+
+  .table td,
+  .table th {
+    font-size: 12px !important;
+    padding: 3px !important;
+  }
+
+  .table td button {
+    font-size: 11px;
+    padding: 2px 6px;
+    margin: 2px 0;
+  }
+}

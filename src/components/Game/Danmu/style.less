@@ -1,0 +1,22 @@
+.danmuContainer {
+  position: absolute !important;
+  bottom: 10vh;
+  left: 0;
+  width: 100%;
+  height: 80vh;
+  pointer-events: none;
+  user-select: none;
+  transition: all .3s;
+  z-index: 1000;
+  overflow: hidden;
+
+  :global {
+    .bullet-wrapper {
+      border: 0;
+      box-shadow: none;
+      text-shadow: #000 1px 0 0, #000 0 1px 0, #000 -1px 0 0, #000 0 -1px 0;
+      font-weight: 600;
+      opacity: 0.8;
+    }
+  }
+}

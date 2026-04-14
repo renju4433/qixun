@@ -1,0 +1,167 @@
+.waterfallContainer {
+  width: 100%;
+  padding: 0 4px;
+}
+
+.waterfallGrid {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+}
+
+.waterfallColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.waterfallItem {
+  break-inside: avoid;
+}
+
+.pagination {
+  display: flex;
+  justify-content: flex-start;
+  margin: 24px 0;
+  padding-left: 8px;
+  flex-wrap: wrap;
+
+  &:first-of-type {
+    margin-bottom: 28px;
+  }
+
+  &:last-of-type {
+    margin-top: 28px;
+  }
+
+  :global {
+
+    .ant-pagination-item,
+    .ant-pagination-prev,
+    .ant-pagination-next {
+      min-width: 36px;
+      height: 36px;
+      line-height: 34px;
+      font-size: 15px;
+      margin-right: 10px;
+      border-radius: 6px;
+    }
+
+    .ant-pagination-item a {
+      font-size: 15px;
+    }
+
+    .ant-pagination-item-active {
+      border-color: #1890ff;
+      background-color: #1890ff;
+
+      a {
+        color: #fff;
+      }
+    }
+
+    .ant-pagination-prev .ant-pagination-item-link,
+    .ant-pagination-next .ant-pagination-item-link {
+      font-size: 14px;
+      border-radius: 6px;
+    }
+  }
+}
+
+/* 移动端适配 */
+@media only screen and (max-width: 600px) {
+  .waterfallContainer {
+    padding: 0 2px;
+  }
+
+  .waterfallGrid {
+    gap: 6px;
+  }
+
+  .waterfallColumn {
+    gap: 6px;
+  }
+
+  .pagination {
+    margin: 16px 0;
+    padding-left: 6px;
+
+    &:first-of-type {
+      margin-bottom: 20px;
+    }
+
+    &:last-of-type {
+      margin-top: 20px;
+    }
+
+    :global {
+
+      .ant-pagination-item,
+      .ant-pagination-prev,
+      .ant-pagination-next {
+        min-width: 32px;
+        height: 32px;
+        line-height: 30px;
+        font-size: 14px;
+        margin-right: 8px;
+        border-radius: 5px;
+      }
+
+      .ant-pagination-item a {
+        font-size: 14px;
+      }
+
+      .ant-pagination-prev .ant-pagination-item-link,
+      .ant-pagination-next .ant-pagination-item-link {
+        border-radius: 5px;
+      }
+    }
+  }
+}
+
+/* 超小屏幕 */
+@media only screen and (max-width: 375px) {
+  .waterfallGrid {
+    gap: 4px;
+  }
+
+  .waterfallColumn {
+    gap: 4px;
+  }
+
+  .pagination {
+    margin: 12px 0;
+    padding-left: 4px;
+
+    &:first-of-type {
+      margin-bottom: 16px;
+    }
+
+    &:last-of-type {
+      margin-top: 16px;
+    }
+
+    :global {
+
+      .ant-pagination-item,
+      .ant-pagination-prev,
+      .ant-pagination-next {
+        min-width: 28px;
+        height: 28px;
+        line-height: 26px;
+        font-size: 13px;
+        margin-right: 6px;
+        border-radius: 4px;
+      }
+
+      .ant-pagination-item a {
+        font-size: 13px;
+      }
+
+      .ant-pagination-prev .ant-pagination-item-link,
+      .ant-pagination-next .ant-pagination-item-link {
+        border-radius: 4px;
+      }
+    }
+  }
+}

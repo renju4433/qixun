@@ -1,0 +1,87 @@
+.roundWrapper {
+  --online-width: 3rem;
+
+  position: absolute;
+  right: 1rem;
+  z-index: 1;
+  margin-top: 1rem;
+  background-color: #FF9427;
+  border-radius: 35px;
+  filter: drop-shadow(0 0.3rem 0.3rem rgba(0, 0, 0, 40%));
+  user-select: none;
+  padding-inline: 2rem;
+  padding-block: 0.5rem;
+  min-width: 110px;
+  display: flex;
+  gap: 1rem;
+
+  :global {
+    .ant-divider {
+      height: 2.6rem;
+      border-color: rgba(253, 253, 253, 30%);
+    }
+  }
+
+  .roundInfoBox {
+    .roundInfoTitle {
+      margin-bottom: 6px;
+      color: rgba(255, 255, 255, 60%);
+      font-size: 14px;
+    }
+
+    .roundInfoValue {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-family: 'Baloo Bhaina';
+      text-align: center;
+    }
+  }
+}
+
+@media only screen and (min-width: 680px) and (max-width: 1019px) {
+  .roundWrapper {
+    :global {
+      .ant-divider {
+        display: none !important;
+      }
+    }
+  }
+}
+
+
+@media only screen and (max-width: 679px) {
+  .roundWrapper {
+    --online-width: 2rem;
+    right: 2px;
+    gap: 1.5rem;
+    //padding-inline: 1rem;
+    padding-block: 0.25rem 0;
+
+    .roundInfoBox {
+      gap: 0;
+      .roundInfoTitle,
+      .roundInfoValue {
+        display: flex;
+        justify-content: center;
+        font-size: 12px;
+      }
+
+      .roundInfoValue {
+        font-size: 16px;
+      }
+    }
+
+    :global {
+      .ant-divider {
+        display: none !important;
+      }
+    }
+  }
+
+  .inApp {
+    margin-top: 3rem;
+  }
+}

@@ -1,0 +1,69 @@
+.rankWrap {
+  margin-block: 1rem;
+
+  :global {
+    .ant-pro-card-header {
+      justify-content: center;
+
+      .ant-pro-card-title {
+        font-size: 1.8rem;
+      }
+    }
+  }
+}
+
+.rankTypeSelector {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  margin-block-end: 1rem;
+
+  :global {
+    .ant-segmented {
+      border-radius: 8px;
+      padding: 4px;
+
+      .ant-segmented-item {
+        border-radius: 5px;
+      }
+    }
+  }
+}
+
+.rankTable {
+  .rankColumn {
+    font-family: 'Baloo Bhaina';
+    font-size: 1rem;
+    padding-right: 0 !important;
+  }
+
+  .userColumn {
+    display: flex;
+    width: auto;
+    gap: 0.5rem;
+    align-items: center;
+    cursor: pointer;
+  }
+
+  .scoreColumn {
+    font-family: 'Baloo Bhaina';
+    font-size: 1rem;
+  }
+
+  .provinceColumn {
+    font-family: 'Baloo Bhaina';
+    font-size: 0.5rem;
+  }
+
+
+  :global {
+    .ant-pro-card {
+      border-radius: 1rem;
+      padding-block-start: 0.5rem;
+    }
+
+    .ant-pagination {
+      display: none;
+    }
+  }
+}

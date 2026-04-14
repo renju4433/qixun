@@ -1,0 +1,304 @@
+.mapBox {
+  position: absolute;
+  right: 16px;
+  bottom: 72px;
+  z-index: 95;
+  width: 16vw;
+  height: calc(16vw / 1.25);
+  max-height: 80vh;
+  opacity: 0.5;
+  // transition: all 0.1s ease-out;
+  // transition-delay: 0.15s;
+  user-select: none;
+
+  .mapSize1 {
+    width: 16vw;
+    height: calc(16vw / 1.25);
+  }
+
+  .mapWrapper {
+    position: relative;
+    width: 100%;
+    height: 100%;
+
+    .zoomControl {
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      z-index: 1;
+      width: 3rem;
+
+      button {
+        width: 30px;
+        min-width: 30px;
+        height: 30px;
+        margin: 6px;
+        padding: 0;
+        color: #000;
+        background: #fff;
+        outline: none;
+        box-shadow: 0 0.125rem 0.625rem 0 rgba(26, 26, 26, 10%);
+        cursor: pointer;
+        user-select: none;
+      }
+    }
+
+    .mapControl {
+      position: absolute;
+      top: -40px;
+      display: inline-block;
+      width: 140px;
+      max-width: 100%;
+      height: 40px;
+      overflow: hidden;
+      background: rgba(0, 0, 0, 50%);
+      border-top-left-radius: 6px;
+      border-top-right-radius: 6px;
+      opacity: 0;
+      transition: all 0.1s ease-out;
+      transition-delay: 0.5s;
+
+      button {
+        display: inline-block;
+        width: 30px;
+        min-width: 30px;
+        height: 30px;
+        margin: 6px;
+        padding: 0;
+        color: #000;
+        font-size: 24px;
+        background: #fff;
+        outline: none;
+        box-shadow: 0 0.125rem 0.625rem 0 rgba(26, 26, 26, 10%);
+        cursor: pointer;
+        user-select: none;
+
+        span {
+          position: static;
+        }
+      }
+    }
+
+    .map {
+      width: 100%;
+      height: 100%;
+    }
+
+    .mapConfirm {
+      padding-top: 12px;
+      overflow: hidden;
+
+      button {
+        width: 100%;
+        font-weight: 800;
+        font-size: 16px;
+        letter-spacing: 2px;
+
+        &:disabled {
+          background-color: rgba(16, 16, 28, 80%);
+        }
+      }
+    }
+
+    .mapContainerClose {
+      display: none;
+
+      :global {
+        .ant-btn {
+          background-color: #090723;
+          border-color: #090723;
+          box-shadow: none;
+
+          &:hover {
+            background-color: #090723 !important;
+            border-color: #090723 !important;
+          }
+        }
+      }
+    }
+  }
+
+  &.mapBoxActive {
+    width: 640px;
+    height: 480px;
+    // 限制最大尺寸不超出屏幕 (right: 16px, bottom: 72px, 预留一些安全边距)
+    opacity: 1;
+    transition-delay: 0s;
+
+    &.mapSize4 {
+      width: 65vw;
+      height: calc(65vw / 1.25);
+      max-width: calc(100vw - 32px);
+      max-height: calc(100vh - 120px);
+    }
+
+    &.mapSize3 {
+      width: 45vw;
+      height: calc(45vw / 1.25);
+      max-width: calc(100vw - 32px);
+      max-height: calc(100vh - 120px);
+    }
+
+    &.mapSize2 {
+      width: 30vw;
+      height: calc(30vw / 1.25);
+      max-width: calc(100vw - 32px);
+      max-height: calc(100vh - 120px);
+    }
+
+    &.mapSize1 {
+      width: 16vw;
+      height: calc(16vw / 1.25);
+      max-width: calc(100vw - 32px);
+      max-height: calc(100vh - 120px);
+    }
+
+    .mapWrapper {
+      .mapControl {
+        opacity: 1;
+        transition-delay: 0s;
+      }
+    }
+  }
+}
+
+.mobileBtn {
+  position: absolute;
+  right: 1rem;
+  bottom: 2rem;
+  z-index: 100;
+  display: none;
+
+  :global {
+    .ant-btn.ant-btn-circle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 60px;
+      height: 60px;
+      font-size: 24px;
+      background-color: #ff9427;
+      border: 2px solid rgba(255, 255, 255, 20%);
+      box-shadow: 0 0 0 4px rgba(255, 255, 255, 50%);
+
+      &:hover {
+        background-color: #ff9427 !important;
+        border-color: rgba(255, 255, 255, 50%) !important;
+      }
+    }
+  }
+}
+
+// 判断需要是 768 才可以和 isMobile 匹配
+@media only screen and (orientation: portrait) {
+  .inApp {
+    .mobileBtn {
+      display: block;
+    }
+
+    .mapBox {
+      position: fixed;
+      right: 0;
+      bottom: -60vh;
+      left: 0;
+      z-index: 105;
+      box-sizing: border-box;
+      width: 100vw !important;
+      height: 40vh !important;
+      box-shadow: 0 -0.125rem 1rem rgba(16, 16, 28, 40%);
+      transition: all 0.4s cubic-bezier(0.05, 0.75, 0.49, 1.04);
+
+      .mapWrapper {
+        .mapControl {
+          display: none !important;
+        }
+      }
+
+      &.mapBoxActive {
+        bottom: 0;
+
+        .mapWrapper {
+          .mapConfirm {
+            position: absolute;
+            right: 1rem;
+            bottom: 1rem;
+            z-index: 110;
+          }
+
+          .mapContainerClose {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            z-index: 110;
+            display: block;
+          }
+        }
+      }
+    }
+  }
+}
+
+@media only screen and (orientation: landscape) {
+  .inApp {
+    .mobileBtn {
+      display: block;
+    }
+
+    .mapBox {
+      position: fixed;
+      right: -50vw;
+      bottom: 0;
+      left: auto;
+      z-index: 105;
+      box-sizing: border-box;
+      width: 50vw !important;
+      height: 100% !important;
+      max-height: none !important;
+      box-shadow: 0 -0.125rem 1rem rgba(16, 16, 28, 40%);
+      transition: all 0.4s cubic-bezier(0.05, 0.75, 0.49, 1.05);
+
+      .mapWrapper {
+        .mapControl {
+          display: none !important;
+        }
+      }
+
+      &.mapBoxActive {
+        right: 0;
+        height: 100% !important;
+
+        .mapControl {
+          display: none;
+        }
+
+        .mapConfirm {
+          position: absolute;
+          right: 1rem;
+          bottom: 1rem;
+          z-index: 110;
+        }
+
+        .mapContainerClose {
+          position: absolute;
+          top: 1rem;
+          right: 1rem;
+          z-index: 110;
+          display: block;
+
+          &.appBtn {
+            top: 1rem;
+            right: 1rem;
+
+            button {
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              width: 42px;
+              height: 42px;
+            }
+          }
+        }
+      }
+    }
+  }
+}

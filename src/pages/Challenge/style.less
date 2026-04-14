@@ -1,0 +1,25 @@
+.wrapper {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  touch-action: none;
+
+  .googleMap {
+    display: flex;
+    flex: 1 1 auto;
+  }
+
+  :global {
+    .ant-spin-nested-loading {
+      position: relative;
+      display: flex;
+      flex: 1 1 auto;
+
+      .ant-spin-container {
+        position: relative;
+        display: flex;
+        flex: 1 1 auto;
+      }
+    }
+  }
+}

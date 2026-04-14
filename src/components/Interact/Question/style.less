@@ -1,0 +1,88 @@
+.question {
+  position: relative;
+  //height: 90vh;
+  width: 1000px;
+  margin: 0 auto;
+
+  .mapContainer {
+  }
+
+  .image {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 45vh;
+  }
+
+  .map {
+    width: 100%;
+    height: 30vh;
+    margin-top: 10px;
+  }
+
+  .controls {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin: 0.25rem 0;
+    flex-flow: wrap;
+    Button {
+      margin: 0.25rem;
+    }
+  }
+}
+
+.iconControls {
+  display: none;
+}
+.textControls {
+  display: block;
+}
+.imageIndex {
+  display: none;
+}
+
+.tip {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  color: #aaa;
+  font-size: 0.7rem;
+}
+
+.lngLatInputControls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0.5rem 0;
+}
+
+@media screen and (max-width: 768px) {
+  .question {
+    width: 100%;
+    .mapContainer {
+    }
+  }
+}
+
+@media screen and (max-height: 600px) {
+  .image {
+    max-height: 25vh;
+  }
+
+  .map {
+    max-height: 35vh;
+  }
+}
+
+@media screen and (max-width: 600px) {
+  .iconControls {
+    display: block;
+  }
+  .textControls {
+    display: none;
+  }
+  .imageIndex {
+    display: block;
+  }
+}

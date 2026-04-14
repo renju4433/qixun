@@ -1,0 +1,38 @@
+.wrapper {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  background-color: #090723;
+  .segmented {
+    div {
+      font-size: 40px;
+    }
+  }
+
+  .container {
+    display: block;
+    width: 1000px;
+    max-width: 100%;
+    height: 100%;
+    margin: auto;
+    padding-bottom: 10rem;
+  }
+
+  .header {
+    position: absolute;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    width: 100%;
+    padding: 1rem 2rem;
+  }
+}
+
+@media only screen and (max-width: 679px) {
+  .wrapper {
+    .container {
+      width: 90%;
+    }
+  }
+}

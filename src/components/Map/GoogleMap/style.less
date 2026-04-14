@@ -1,0 +1,315 @@
+.wrap {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 100%;
+  background-color: #090723;
+  -webkit-user-select: none; /* Safari */
+  -moz-user-select: none; /* Firefox */
+  -ms-user-select: none; /* IE/Edge */
+  user-select: none; /* 标准语法 */
+
+  .middleContainer {
+    position: relative;
+    display: flex;
+    align-items: center;
+    margin-top: 1rem;
+
+    > :not(:last-child) {
+      margin-right: 1rem;
+    }
+  }
+
+  :global {
+    .psv-navbar {
+      display: none;
+    }
+
+    .gm-bundled-control-on-bottom {
+      bottom: 250px !important;
+      left: 1rem !important;
+      display: none;
+    }
+  }
+
+  .viewer {
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .controls {
+    position: absolute;
+    bottom: 16px;
+    left: 24px;
+    z-index: 10;
+
+    .zoomControl {
+      display: inline-flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      margin-bottom: 10px;
+
+      button {
+        width: 40px;
+        min-width: auto;
+        height: 50px;
+        background: #090723;
+        border: 0;
+        outline: none;
+        cursor: pointer;
+
+        &:first-child {
+          border-bottom: 1px solid rgba(255, 255, 255, 30%);
+          border-radius: 0;
+          border-top-left-radius: 20px;
+          border-top-right-radius: 20px;
+        }
+
+        &:last-child {
+          border-radius: 0;
+          border-bottom-right-radius: 20px;
+          border-bottom-left-radius: 20px;
+        }
+
+        &:hover {
+          color: #fff !important;
+          background-color: #595959 !important;
+        }
+
+        &:active {
+          color: #fff !important;
+          background-color: #434343 !important;
+        }
+      }
+    }
+
+    .settingControlInline {
+      margin-bottom: 10px;
+
+      button {
+        .round-control-button();
+      }
+    }
+
+    .panoControl {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-bottom: 10px;
+
+      button {
+        .round-control-button();
+      }
+
+      :global {
+        button:disabled {
+          color: rgba(0, 0, 0, 60%);
+          background-color: rgba(255, 255, 255, 60%);
+          border-color: #424242;
+          box-shadow: none;
+          cursor: not-allowed;
+
+          &:hover {
+            color: rgba(0, 0, 0, 60%);
+            background-color: rgba(255, 255, 255, 60%);
+          }
+        }
+      }
+    }
+  }
+}
+
+.round-control-button() {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  min-width: auto;
+  height: 40px;
+  color: #fff;
+  font-size: 24px;
+  background: #090723;
+  border: 0;
+  border-radius: 24px;
+  outline: none;
+  cursor: pointer;
+
+  &:hover {
+    color: #fff;
+    background-color: #595959;
+  }
+
+  &:active {
+    color: #fff;
+    background-color: #434343;
+  }
+}
+
+.settingControl {
+  position: fixed;
+  bottom: 16px;
+  left: 24px;
+  z-index: 200;
+
+  button {
+    .round-control-button();
+  }
+}
+
+.spinning {
+  :global {
+    .ant-spin-spinning {
+      max-height: none !important;
+    }
+
+    .ant-spin-blur {
+      &::after {
+        opacity: 1;
+      }
+    }
+  }
+}
+
+.googleMapLogo {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+}
+
+.header {
+  position: absolute;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  user-select: none;
+  pointer-events: none;
+}
+
+.settingModal {
+  :global {
+    .ant-modal {
+      width: 40% !important;
+
+      .ant-modal-header {
+        margin-bottom: 16px;
+        text-align: center;
+        background-color: transparent;
+
+        .ant-modal-title {
+          font-size: 28px;
+        }
+      }
+
+      .ant-modal-content {
+        background-color: transparent;
+        box-shadow: none;
+      }
+    }
+  }
+
+  .settingOption {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-block: 1rem;
+
+    .settingOptionIcon {
+      font-size: 28px;
+      line-height: 1;
+      margin-block-end: 0.5rem;
+
+      svg {
+        transition: all 0.5s linear 0s;
+      }
+    }
+
+    .settingOptionLabel {
+      font-weight: 700;
+      font-size: 14px;
+      line-height: 18px;
+      margin-block-end: 0.5rem;
+    }
+  }
+
+  .settingOptionControl {
+    justify-content: center;
+    width: 100%;
+    margin-block-start: 1rem;
+
+    button {
+      width: 140px;
+    }
+  }
+}
+
+.alarmContainer {
+  --border-width: 3rem;
+
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 50;
+  box-sizing: content-box;
+  width: 100%;
+  height: 100%;
+  animation: alarm-animation 1s ease-in-out backwards;
+  pointer-events: none;
+}
+
+@media only screen and (min-width: 680px) and (max-width: 1019px) {
+  .settingModal {
+    :global {
+      .ant-modal {
+        width: 70% !important;
+      }
+    }
+  }
+
+  .alarmContainer {
+    --border-width: 1.5rem;
+  }
+}
+
+@media only screen and (max-width: 679px) {
+  .logo {
+    margin-top: 1.5rem;
+
+    img {
+      width: 45px;
+    }
+
+    sup {
+      top: -12px;
+      font-size: 0.5rem;
+      line-height: 0.9rem;
+      padding-inline: 0.3rem;
+    }
+  }
+
+  .settingModal {
+    :global {
+      .ant-modal {
+        width: 100% !important;
+      }
+    }
+  }
+
+  .alarmContainer {
+    --border-width: 1rem;
+  }
+}
+
+@keyframes alarm-animation {
+  0% {
+    box-shadow: inset 0 0 var(--border-width) calc(var(--border-width) * -1)
+      rgba(233, 69, 96, 60%);
+  }
+
+  50% {
+    box-shadow: inset 0 0 var(--border-width) var(--border-width)
+      rgba(233, 69, 96, 60%);
+  }
+}

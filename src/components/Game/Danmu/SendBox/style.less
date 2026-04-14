@@ -1,0 +1,108 @@
+.danmuModal {
+  pointer-events: none;
+
+  :global {
+    .ant-modal {
+      top: calc(100vh - 100px);
+
+      .ant-modal-content {
+        padding: 5px;
+        background-color: #090723;
+        border-radius: 100px;
+
+        .ant-form {
+          gap: 8px;
+          align-items: center;
+
+          .ant-form-item {
+            flex: 1 1 auto;
+            margin: 0;
+
+            .ant-form-item-control-input {
+              .ant-input {
+                color: #000;
+                background-color: rgba(255, 255, 255, 85%);
+                border: none;
+                border-radius: 100px;
+              }
+
+              input::placeholder {
+                color: #8c8c8c;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    .ant-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 !important;
+
+      .ant-btn-icon {
+        .anticon {
+          font-size: 24px;
+        }
+      }
+    }
+  }
+
+  .emojiButton {
+    color: #ff9427;
+    background-color: #fff;
+  }
+}
+
+.danmuButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background-color: #090723 !important;
+  outline: none !important;
+  box-shadow: none !important;
+
+  &:hover {
+    color: #fff !important;
+    background-color: #595959 !important;
+  }
+
+  &:active {
+    color: #fff !important;
+    background-color: #434343 !important;
+  }
+
+  :global {
+    .ant-btn-icon {
+      .ant-btn-icon {
+        font-size: 24px;
+      }
+    }
+  }
+}
+
+@media only screen and (max-width: 679px) {
+  :global {
+    .ant-modal-root .ant-modal-mask {
+      background-color: rgba(0, 0, 0, 45%) !important;
+    }
+  }
+
+  .danmuModal {
+    pointer-events: all;
+
+    :global {
+      .ant-modal {
+        top: calc(100vh - 80px);
+        width: 100% !important;
+        max-width: 100% !important;
+        height: 80px;
+        margin: 0 !important;
+        background-color: #090723;
+        padding-block-start: 1rem;
+      }
+    }
+  }
+}

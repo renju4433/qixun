@@ -1,0 +1,145 @@
+.headerWrapper {
+  z-index: 1;
+  height: 4rem;
+
+  .headerContainer {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    height: 100%;
+    margin: 0 2rem;
+
+    .profile {
+      display: flex;
+      flex-direction: row;
+      gap: 0.75rem;
+      align-items: center;
+      cursor: pointer;
+
+      .userInfo {
+        min-width: 6rem;
+
+        .username {
+          margin-bottom: 0.25rem;
+          color: #fff;
+          font-weight: 700;
+          font-size: 1rem;
+        }
+
+        .vipState {
+          display: flex;
+          align-items: center;
+          color: rgba(255, 255, 255, 60%);
+          font-size: 0.5rem;
+
+          img {
+            margin-inline-end: 0.25rem;
+          }
+        }
+
+        .loginBtn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 6rem;
+          background-color: rgba(255, 255, 255, 15%);
+          border: none;
+          color: #fff;
+          font-size: 1rem;
+          font-weight: 700;
+          cursor: pointer;
+        }
+      }
+    }
+  }
+}
+
+.navigate {
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+  align-items: center;
+  user-select: auto;
+  pointer-events: auto;
+
+  .backBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.4rem;
+    height: 2.4rem;
+    padding: 0;
+    background-color: rgba(255, 255, 255, 25%);
+    border: none;
+    cursor: pointer;
+
+  }
+
+  .logo {
+    cursor: pointer;
+    min-width: 70px;
+    text-align: center;
+
+    .logoText {
+      color: #fff;
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: 0.12em;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 35%);
+    }
+
+    sup {
+      position: relative;
+      display: inline-block;
+      line-height: 1.1rem;
+      padding-inline: 0.4rem;
+      background-color: #fa8c16;
+      border-radius: 1rem;
+      font-size: 0.75rem;
+      left: 4px;
+      top: -12px;
+    }
+  }
+  .appNavigate {
+  }
+
+}
+
+.logoContainer {
+  top: 1rem;
+}
+
+.slogan {
+  padding-top: 5px;
+}
+
+@media only screen and (max-width: 679px) {
+  .headerWrapper {
+    .headerContainer {
+      margin: 0 1rem;
+    }
+  }
+
+  .navigate {
+    z-index: 10001;
+    .logo {
+      .logoText {
+        font-size: 1.5rem;
+      }
+
+      sup {
+        left: 0;
+        top: -12px;
+        font-size: 10px;
+        line-height: 0.9rem;
+        padding-inline: 0.3rem;
+      }
+    }
+  }
+
+  .appNavigate {
+    margin-top: 2rem;
+  }
+}

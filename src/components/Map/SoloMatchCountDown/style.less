@@ -1,0 +1,71 @@
+.wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background-color: black;
+
+  .countdownContainer {
+    align-items: center;
+    margin-top: 5rem;
+    margin-right: auto;
+    margin-left: auto;
+    text-align: center;
+    .title {
+      font-weight: 700;
+      font-size: 2rem;
+    }
+    .countdownTitle {
+      padding-top: 1rem;
+    }
+
+    .countdown {
+      padding-top: 0.5rem;
+    }
+  }
+
+  .vs {
+    display: flex;
+    justify-content: center;
+    width: 40%;
+    margin-right: auto;
+    margin-left: auto;
+    padding-top: 2rem;
+    .team {
+      width: 40%;
+    }
+    .vsText {
+      width: 20%;
+      font-weight: bold;
+      font-size: 2rem;
+      font-style: italic;
+      text-align: center;
+    }
+  }
+}
+
+.soloMatchUser {
+  align-content: center;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  .avatar {
+    display: flex;
+    width: 80px;
+    height: 80px;
+    margin-right: auto;
+    margin-left: auto;
+  }
+}
+
+@media only screen and (max-width: 679px) {
+  .wrapper {
+    .vs {
+      width: 80%;
+    }
+  }
+}

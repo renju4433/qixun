@@ -1,0 +1,440 @@
+.wrapper {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 100;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  scrollbar-width: none;
+  /* 对于Firefox浏览器，隐藏滚动条 */
+  -ms-overflow-style: none;
+  /* IE、Edge */
+
+  .innerWrapper {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    overflow: scroll;
+    scrollbar-width: none;
+    /* 对于Firefox浏览器，隐藏滚动条 */
+    -ms-overflow-style: none;
+    /* IE、Edge */
+  }
+
+  .mapResult {
+    z-index: 0;
+    display: flex;
+    flex: 1 1 auto;
+    align-items: stretch;
+    justify-content: center;
+    justify-items: center;
+    width: 100%;
+    height: 40vh;
+    max-height: calc(100vh - 5rem);
+    background-color: #090723;
+  }
+
+  .scoreReulst {
+    position: relative;
+    z-index: 0;
+    display: flex;
+    flex-direction: row;
+    gap: 3rem;
+    align-items: center;
+    justify-content: center;
+    min-height: 5rem;
+    max-height: 40vh;
+    background-color: #090723;
+    box-shadow: 0 0 0.625rem -0.0625rem rgba(0, 0, 0, 40%);
+
+    .scoreReulstLabel {
+      color: rgba(255, 255, 255, 60%);
+      font-size: 0.8rem;
+      text-indent: -5px;
+      margin-block-end: 9px;
+    }
+
+    .scoreReulstValue {
+      font-size: 2.4rem;
+      font-family: 'Baloo Bhaina';
+      line-height: 2.4rem;
+      letter-spacing: 2px;
+      text-shadow: 0 0 2px #ef9434, 0 0 6px #ef9434, 0 0 4px #ef9434,
+        0 0 10px #fa8c16, 0 0 10px #fa8c16, 0 0 10px #fa8c16, 0 0 15px #fa8c16,
+        0 0 15px #fa8c16;
+
+      small {
+        color: rgba(255, 255, 255, 60%);
+        font-size: 0.8rem;
+        letter-spacing: 0;
+        text-shadow: none;
+      }
+    }
+
+    .round {
+      .scoreReulstLabel {
+        text-indent: 0;
+      }
+
+      .scoreReulstValue {
+        text-shadow: none;
+      }
+    }
+
+    .distance {
+      .scoreReulstValue {
+        text-shadow: 0 0 2px #b5f5ec, 0 0 6px #b5f5ec, 0 0 4px #b5f5ec,
+          0 0 10px #13c2c2, 0 0 10px #13c2c2, 0 0 10px #13c2c2, 0 0 15px #13c2c2,
+          0 0 15px #13c2c2;
+      }
+
+      .timeoutValue {
+        font-weight: bolder;
+        font-size: 1.8rem;
+        text-shadow: 0 0 2px #ffa39e, 0 0 6px #ffa39e, 0 0 4px #ffa39e,
+          0 0 10px #f5222d, 0 0 10px #f5222d, 0 0 10px #f5222d, 0 0 15px #f5222d,
+          0 0 15px #f5222d;
+      }
+    }
+  }
+
+  .controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 6rem;
+    background-color: #090723;
+
+    button {
+      min-width: 120px;
+      box-shadow: 0 0.125rem 0.625rem 0 rgba(26, 26, 26, 10%);
+    }
+
+    :global {
+      .ant-btn-background-ghost {
+        min-width: auto;
+        background-color: rgba(255, 255, 255, 90%);
+
+        &:active,
+        &:hover {
+          background-color: rgba(255, 255, 255, 100%) !important;
+        }
+      }
+    }
+
+    p {
+      margin: 0.5rem 0 0;
+      color: rgba(255, 255, 255, 40%);
+
+      span {
+        display: inline-block;
+        margin: 0 0.25rem;
+        padding-right: 0.3rem;
+        padding-left: 0.25rem;
+        font-weight: 400;
+        border: 1px solid rgba(255, 255, 255, 40%);
+        border-radius: 0.3125rem;
+      }
+    }
+  }
+}
+
+.dailyChallengeRank {
+  color: rgba(255, 255, 255, 60%);
+
+  span {
+    color: #fff;
+    font-weight: bolder;
+    font-size: 1.8rem;
+    text-shadow: 0 0 2px #ffa39e, 0 0 6px #ffa39e, 0 0 4px #ffa39e,
+      0 0 10px #f5222d, 0 0 10px #f5222d, 0 0 10px #f5222d, 0 0 15px #f5222d,
+      0 0 15px #f5222d;
+  }
+}
+
+@media only screen and (max-width: 679px) {
+  .wrapper {
+    .scoreReulst {
+      flex-wrap: wrap;
+      gap: 0 0;
+      align-content: center;
+      height: 10rem;
+
+      >div {
+        width: 45%;
+
+        .scoreReulstValue {
+          font-size: 1.8rem;
+        }
+      }
+    }
+
+    .controls {
+      height: 5rem;
+
+      p {
+        display: none;
+      }
+
+      .dailyChallengeRank {
+        width: 100vw;
+        text-align: center;
+      }
+    }
+  }
+}
+
+.challengeWrap::-webkit-scrollbar {
+  display: none;
+  /* 对于Webkit浏览器，隐藏滚动条 */
+}
+
+.innerWrapper::-webkit-scrollbar {
+  display: none;
+  /* 对于Webkit浏览器，隐藏滚动条 */
+}
+
+.wrapper::-webkit-scrollbar {
+  display: none;
+  /* 对于Webkit浏览器，隐藏滚动条 */
+}
+
+.challengeWrap {
+  align-items: center;
+  justify-content: center;
+  justify-items: center;
+  overflow: auto;
+  text-align: center;
+  background: rgba(9, 7, 35, 80%);
+  backdrop-filter: blur(0.5rem);
+
+  scrollbar-width: none;
+  /* 对于Firefox浏览器，隐藏滚动条 */
+  -ms-overflow-style: none;
+  /* IE、Edge */
+
+  .innerWrapper {
+    display: block;
+    flex: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 50%;
+    height: auto;
+    max-height: 100%;
+    margin: 0 auto;
+    overflow: scroll;
+
+    scrollbar-width: none;
+    /* 对于Firefox浏览器，隐藏滚动条 */
+    -ms-overflow-style: none;
+    /* IE、Edge */
+
+    .mapResult {
+      position: relative;
+      display: flex;
+      flex: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 40vh;
+
+      .avatarHealth {
+        position: relative;
+        width: calc(100% - 7rem);
+      }
+    }
+
+    .roundScore {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      margin-top: 3.5rem;
+
+      :global {
+        .ant-divider {
+          margin: 0;
+        }
+      }
+
+      .roundScoreRow {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+
+        .roundScoreValue {
+          width: 14rem;
+          font-size: 1.25rem;
+          font-family: 'Baloo Bhaina', cursive;
+          text-align: center;
+        }
+
+        .userName {
+          width: 14rem;
+          font-size: 1.25rem;
+          text-align: center;
+        }
+
+        .distance {
+          width: 14rem;
+          font-size: 1rem;
+          text-align: center;
+        }
+
+        .roundScoreLabel {
+          flex: 1 1;
+          flex-shrink: 0;
+          color: rgba(255, 255, 255, 40%);
+          font-weight: 700;
+          font-size: 1rem;
+          font-style: normal;
+          text-align: center;
+        }
+      }
+
+      .roundScoreDistance {
+        margin: 10px 0;
+      }
+
+      .roundScoreScore {
+        margin: 10px 0;
+
+        .roundScoreValue {
+          font-size: 1.25rem;
+          line-height: 1.25rem;
+          text-shadow: 0 0 2px #ef9434, 0 0 6px #ef9434, 0 0 4px #ef9434,
+            0 0 10px #fa8c16, 0 0 10px #fa8c16, 0 0 10px #fa8c16,
+            0 0 15px #fa8c16, 0 0 15px #fa8c16;
+        }
+      }
+
+      .roundScoreHealth {
+        margin: 10px 0;
+
+        .roundScoreValue {
+          font-size: 1.25rem;
+          line-height: 1.25rem;
+          text-shadow: 0 0 2px #ffa39e, 0 0 6px #ffa39e, 0 0 4px #ffa39e,
+            0 0 10px #f5222d, 0 0 10px #f5222d, 0 0 10px #f5222d,
+            0 0 15px #f5222d, 0 0 15px #f5222d;
+        }
+      }
+    }
+
+    .teamHeader {
+      margin-top: 1.5rem;
+      font-weight: 700;
+      font-size: 1.25rem;
+      font-style: italic;
+    }
+
+    .streakEnd {
+      width: 100%;
+      text-align: center;
+
+      .end {
+        margin-bottom: 8px;
+        color: #f5222d;
+        font-weight: bold;
+        font-size: 20px;
+      }
+
+      .streak {
+        margin-bottom: 5px;
+        color: green;
+        font-size: 18px;
+      }
+
+      .choose {}
+    }
+
+    .eliminatedUsers {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      align-items: center;
+      justify-content: center;
+
+      .eliminatedUsersLabel {
+        font-weight: 700;
+        font-size: 1.25rem;
+        line-height: 1.5rem;
+      }
+
+      .eliminatedUsersValue {
+        display: flex;
+        flex-direction: row;
+        gap: 0.5rem;
+        align-items: center;
+        justify-content: center;
+      }
+    }
+  }
+}
+
+.userBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  p {
+    max-width: var(--bar-container-width);
+    margin: 0;
+    overflow: hidden;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    word-break: break-all;
+  }
+}
+
+@media only screen and (min-width: 680px) and (max-width: 1019px) {
+  .challengeWrap {
+    .innerWrapper {
+      width: 80%;
+    }
+  }
+}
+
+@media only screen and (max-width: 679px) {
+  .wrapper {
+    :global {
+      .ant-divider {
+        //padding: 0;
+        margin: 5px 0;
+      }
+    }
+  }
+
+  .challengeWrap {
+    .innerWrapper {
+      width: 100%;
+
+      .mapResult {
+        .avatarHealth {}
+      }
+
+      .roundScore {
+        .roundScoreRow {
+          .distance {
+            width: 8rem;
+          }
+
+          .roundScoreValue {
+            width: 8rem;
+          }
+        }
+      }
+    }
+  }
+}

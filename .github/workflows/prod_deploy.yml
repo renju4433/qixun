@@ -1,0 +1,77 @@
+name: 棋寻前端部署
+run-name: ${{ github.event.head_commit.message }}
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    env:
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+
+    concurrency:
+      group: deploy-group
+      cancel-in-progress: true
+
+    strategy:
+      matrix:
+        node-version: [18]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Increase Node.js memory limit and run build
+        run: |
+          export NODE_OPTIONS="--max-old-space-size=4096"
+          npm run build
+
+      - name: Remove source map
+        run: rm -rf ./dist/*.map
+
+      - name: Install ossutil
+        run: |
+          sudo -v ; curl https://gosspublic.alicdn.com/ossutil/install.sh | sudo bash
+
+      #      - name: Delete existing files in OSS
+      #        env:
+      #          ACCESS_KEY_ID: ${{ secrets.ACCESS_KEY_ID }}
+      #          ACCESS_KEY_SECRET: ${{ secrets.ACCESS_KEY_SECRET }}
+      #        run: |
+      #          /usr/bin/ossutil rm -rf oss://qixun-front -i $ACCESS_KEY_ID -k $ACCESS_KEY_SECRET -e oss-cn-shanghai.aliyuncs.com
+
+      - name: Sync asstes to OSS
+        env:
+          ACCESS_KEY_ID: ${{ secrets.ACCESS_KEY_ID }}
+          ACCESS_KEY_SECRET: ${{ secrets.ACCESS_KEY_SECRET }}
+        run: |
+          /usr/bin/ossutil cp -f -r ./dist oss://chaofun-resource/qixun -i $ACCESS_KEY_ID -k $ACCESS_KEY_SECRET -e oss-accelerate.aliyuncs.com
+          curl 'https://cs.console.aliyun.com/hook/trigger?token=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJjbHVzdGVySWQiOiJjMWQwZDBmYTM1Y2VkNDYwMGFkYzUxMzdjMmYwNmRlZDEiLCJpZCI6IjQ5OTcxMzE4NjMxNjk0NDkzIn0.CHlCURV93bWo7qcOCkERyfIuJI8Shb_p7r8GRYGjalQ7A02_Ev0Fd3f7cQH1OGeypaX3Y3iB2iZMIMY-uo7_e1jYrGgkhTlF9zvQf9pYB1NckGAI86lECTVqL7Ee9uOmREmtUanL-hIm7uqGfpb4FWCDjuQJA41nYZTJD6DOgWA'
+
+      - name: 发送通知到飞书（成功）
+        if: ${{ success() }}
+        run: |
+          curl 'https://open.feishu.cn/open-apis/bot/v2/hook/7300bfda-d5ac-40c1-9088-6c80a2b4941b' \
+          -H 'Content-Type: application/json' \
+          -d "{\"msg_type\": \"text\", \"content\": {\"text\": \"炒饭：棋寻前端 ${{ github.event.head_commit.message}} 部署成功\"}}"
+
+      - name: 发送通知到飞书（失败）
+        if: ${{ failure() }}
+        run: |
+          curl 'https://open.feishu.cn/open-apis/bot/v2/hook/7300bfda-d5ac-40c1-9088-6c80a2b4941b' \
+          -H 'Content-Type: application/json' \
+          -d "{\"msg_type\": \"text\", \"content\": {\"text\": \"炒饭：棋寻前端  ${{ github.event.head_commit.message}} 部署失败，请查看运行记录：${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}}"

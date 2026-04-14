@@ -1,0 +1,369 @@
+.partyWrapper {
+  min-height: 100%;
+  background-color: #090723;
+
+  .partyHeader {
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    padding: 1rem 2rem;
+
+    header {
+      position: relative;
+      display: flex;
+      flex-flow: row wrap;
+      justify-content: space-between;
+      width: 100%;
+
+      .partyRoomPlayers {
+        width: 100%;
+        text-align: center;
+      }
+
+      .partyInfo {
+        position: absolute;
+        top: 1rem;
+        left: 50%;
+        transform: translate(-50%, -50%);
+      }
+      .partyRoomName {
+        display: block;
+        padding: 0.5rem 0.8rem;
+        font-weight: 700;
+        font-size: 16px;
+        line-height: 1.375rem;
+        text-align: center;
+        //text-transform: uppercase;
+        text-shadow: 0 0.0625rem 0.1875rem rgba(255, 255, 255, 30%);
+        background-color: rgba(255, 255, 255, 15%);
+        border-radius: 20px;
+        padding-inline: 2rem;
+      }
+
+      .partyRoomNMode {
+        width: 100vw;
+        line-height: 1.5rem;
+        text-align: center;
+        padding-block: 0.5rem;
+      }
+
+      .partyTopButton {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        margin-top: 1rem;
+        button {
+          margin: 0 0.5rem;
+          background-color: rgba(255, 255, 255, 20%);
+          border: none !important;
+          box-shadow: none;
+          transition: transform 0.15s ease, background 0.15s ease;
+
+          &:hover {
+            color: rgba(255, 255, 255, 85%) !important;
+            transform: scale(1.05);
+          }
+        }
+      }
+    }
+  }
+
+  .partyRoom {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+
+    .partyMember {
+      position: relative;
+      display: flex;
+      align-items: center;
+      width: 70%;
+      min-height: 10rem;
+      margin: auto;
+
+      .partyMemberWrapper {
+        flex-grow: 1;
+      }
+    }
+  }
+
+  .partyOnGoing {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+
+    h3 {
+      font-weight: 700;
+      font-size: 1.25rem;
+      text-shadow: 0.125rem 0.125rem 0.25rem rgba(255, 255, 255, 90%);
+      margin-block: 2rem;
+    }
+  }
+
+  .partyPk {
+    display: flex;
+    flex-grow: 1;
+
+    .partyTeamWrapper {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
+      justify-content: center;
+      width: calc(50% - 30rem);
+
+      .partyTeamPlayers {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .partyTeamJoinBtn {
+        display: flex;
+        justify-content: center;
+
+        button {
+          outline: none;
+
+          &:active,
+          &:hover {
+            //background-color: #c41d7f;
+          }
+
+          &.blueTeam {
+            &:active,
+            &:hover {
+              //background-color: #0050b3;
+            }
+          }
+        }
+      }
+    }
+
+    .partyTeamVs {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      padding: 0 0rem;
+
+      .partyTeamVsIcon {
+        display: flex;
+        align-items: flex-end;
+        font-size: 32px;
+        font-style: italic;
+      }
+
+      .partyTeamVsSwitch {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        justify-content: center;
+        max-width: 18.75rem;
+        margin-top: 1rem;
+      }
+    }
+
+    .partyTeamOperationMobile {
+      display: none;
+      align-items: center;
+      justify-content: center;
+
+      button {
+        width: 4rem !important;
+        border-color: #fff;
+      }
+    }
+  }
+
+  .partyMembers {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    align-items: center;
+    justify-content: center;
+
+    .partyMembersList {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      padding: 0 1rem;
+    }
+
+    .partyOpeartions {
+      margin-block-start: 1rem;
+      button {
+        width: 8rem;
+        color: #fff;
+        background-color: #fa8c16;
+        outline: none;
+      }
+
+      .partyInviteBtn {
+        background-color: rgba(255, 255, 255, 20%);
+      }
+    }
+  }
+
+  .partyInviteBtn {
+    background-color: rgba(255, 255, 255, 20%);
+  }
+
+  .observerWrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    .observerTitle {
+      display: flex;
+      flex-direction: row;
+      gap: 1rem;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+    }
+
+    .observerList {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      justify-content: center;
+      min-height: 3rem;
+      margin-top: 1rem;
+    }
+  }
+}
+
+.partySettings {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  width: 100%;
+  padding-bottom: 2rem;
+}
+
+.partyStartGame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1rem;
+
+  p {
+    font-size: 1rem;
+    margin-block: 0;
+  }
+
+  :global {
+    .ant-btn.ant-btn-round.ant-btn-lg {
+      color: #fff;
+      outline: none;
+    }
+  }
+}
+
+@media only screen and (min-width: 680px) and (max-width: 1019px) {
+  .partyWrapper {
+    .partySettings {
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+
+      .partySettingsItem {
+        width: 17rem;
+      }
+    }
+  }
+  .partyStartGame {
+    p {
+      font-size: 0.75rem;
+    }
+  }
+}
+
+@media only screen and (max-width: 679px) {
+  .partyWrapper {
+    .partyHeader {
+      gap: 0.5rem;
+      padding: 0.5rem;
+
+      header {
+        .partyRoomName {
+          display: none;
+        }
+        .partyTopButton {
+          button {
+            font-size: 12px;
+          }
+        }
+      }
+    }
+
+    .partyRoom {
+      .partyMember {
+        width: 100%;
+      }
+      .partyPk {
+        //flex-direction: column;
+
+        .partyTeamWrapper {
+          width: 100%;
+          padding-block-end: 1rem;
+        }
+
+        .partyTeamVs {
+          .partyTeamVsIcon {
+            img {
+              width: 72px;
+            }
+          }
+
+          .partyTeamOperation {
+            display: none;
+          }
+        }
+      }
+
+      .partyTeamOperationMobile {
+        display: flex;
+        align-content: center;
+        justify-content: center;
+        width: 100%;
+        text-align: center;
+      }
+    }
+
+    .partySettings {
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+
+      .partySettingsItem {
+        width: 17rem;
+      }
+    }
+  }
+
+  .partyStartGame {
+    p {
+      font-size: 0.75rem;
+    }
+  }
+}
+
+.appNavigate {
+  margin-top: 2rem;
+}
