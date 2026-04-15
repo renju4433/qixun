@@ -547,8 +547,8 @@ export async function register(
   options?: Record<string, any>,
 ): Promise<API.Result<null>> {
   return request<API.Result<null>>('/register', {
-    method: 'GET',
-    params,
+    method: 'POST',
+    data: params,
     ...(options || {}),
   });
 }

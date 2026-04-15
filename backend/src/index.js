@@ -16,9 +16,29 @@ const corsOrigins = (process.env.CORS_ORIGIN || 'https://saiyuan.top')
   .filter(Boolean);
 
 const smsCodes = new Map();
+const defaultChallengeProvider = {
+  userId: 0,
+  userName: '棋寻',
+  icon: '',
+  ups: 0,
+  followers: 0,
+  focus: 0,
+  desc: null,
+  rating: 1200,
+  puzzleRating: 1200,
+  province: null,
+  organization: null,
+  avatarFrame: null,
+};
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use((req, _res, next) => {
+  // 兼容 nginx 未去掉 /api 前缀的场景
+  if (req.url === '/api') req.url = '/';
+  else if (req.url.startsWith('/api/')) req.url = req.url.slice(4);
+  next();
+});
 app.use(
   cors({
     origin(origin, cb) {
@@ -47,8 +67,8 @@ function toUserProfile(row) {
     followers: 0,
     focus: 0,
     desc: row.desc || null,
-    rating: row.rating ?? 1000,
-    puzzleRating: row.puzzle_rating ?? 1000,
+    rating: row.rating ?? 1200,
+    puzzleRating: row.puzzle_rating ?? 1200,
     province: row.province || null,
     organization: null,
     avatarFrame: null,
@@ -96,6 +116,49 @@ function setAuthCookie(res, token) {
   });
 }
 
+function readParam(req, ...keys) {
+  for (const key of keys) {
+    const v = req.query?.[key] ?? req.body?.[key];
+    if (v !== undefined && v !== null && String(v).trim() !== '') {
+      return String(v).trim();
+    }
+  }
+  return '';
+}
+
+function getTodayChallengeId(type) {
+  const day = new Date().toISOString().slice(0, 10);
+  return `daily-${day}-${type}`;
+}
+
+function makeReadyGameInfo(type) {
+  const challengeId = getTodayChallengeId(type);
+  return {
+    id: challengeId,
+    status: 'ready',
+    health: 10000,
+    type: 'challenge',
+    challengeId,
+    player: {
+      totalScore: 0,
+      roundResults: [],
+    },
+    rounds: [],
+    currentRound: null,
+    roundNumber: 5,
+    roundTimePeriod: null,
+    roundTimeGuessPeriod: null,
+    timerStartTime: null,
+    startTimerPeriod: null,
+    mapsName: type === 'world' ? '每日挑战-全球' : '每日挑战-中国',
+    mapsId: null,
+    teams: null,
+    playerIds: null,
+    requestUserId: null,
+    host: defaultChallengeProvider,
+  };
+}
+
 app.get('/health', (_req, res) => res.json(ok({ status: 'ok' })));
 
 app.get('/v0/time/getTime', (_req, res) => res.json(ok(Date.now())));
@@ -108,11 +171,11 @@ app.post('/v0/phone/getCodeV3', (req, res) => {
   return res.json(ok(null));
 });
 
-app.get('/register', async (req, res) => {
+app.post('/register', async (req, res) => {
   try {
-    const userName = String(req.query.userName || '').trim();
-    const password = String(req.query.password || '').trim();
-    const phone = String(req.query.phone || '').trim();
+    const userName = readParam(req, 'userName', 'username', 'user_name');
+    const password = readParam(req, 'password', 'pwd');
+    const phone = readParam(req, 'phone', 'mobile', 'phoneNumber');
 
     if (!userName || !password) return res.json(fail('参数不完整'));
 
@@ -121,8 +184,8 @@ app.get('/register', async (req, res) => {
     if (exists.length > 0) return res.json(fail('用户名已存在'));
 
     const [ret] = await pool.query(
-      'INSERT INTO users(user_name, phone, password_hash) VALUES (?, ?, ?)',
-      [userName, phone || null, hash],
+      'INSERT INTO users(user_name, phone, password_hash, rating, puzzle_rating) VALUES (?, ?, ?, ?, ?)',
+      [userName, phone || null, hash, 1200, 1200],
     );
 
     const { token } = await createSession(ret.insertId);
@@ -133,10 +196,10 @@ app.get('/register', async (req, res) => {
   }
 });
 
-app.get('/login', async (req, res) => {
+app.all('/login', async (req, res) => {
   try {
-    const userName = String(req.query.userName || '').trim();
-    const password = String(req.query.password || '').trim();
+    const userName = readParam(req, 'userName', 'username', 'user_name', 'phone');
+    const password = readParam(req, 'password', 'pwd');
     if (!userName || !password) return res.json(fail('账号或密码不能为空'));
 
     const [rows] = await pool.query(
@@ -165,7 +228,7 @@ app.get('/login', async (req, res) => {
   }
 });
 
-app.get('/logout', async (req, res) => {
+app.all('/logout', async (req, res) => {
   try {
     const token = req.signedCookies.qixun_sid || req.cookies.qixun_sid;
     if (token) await pool.query('DELETE FROM user_sessions WHERE token = ?', [token]);
@@ -207,11 +270,41 @@ app.get('/v0/qixun/activity/list', (_req, res) => {
       normalActivities: [
         { title: '每日挑战', link: '/daily-challenge' },
         { title: '匹配', link: '/match' },
-        { title: '派对', link: '/party' },
-        { title: '题库', link: '/maps' },
-        { title: '互动', link: '/interact' },
       ],
       specialActivities: [],
+    }),
+  );
+});
+
+app.get('/v0/qixun/challenge/getDailyChallengeId', (req, res) => {
+  const type = String(req.query.type || 'china');
+  return res.json(ok(getTodayChallengeId(type)));
+});
+
+app.get('/v0/qixun/challenge/getDailyChallengeInfo', (req, res) => {
+  const type = String(req.query.type || 'china');
+  return res.json(
+    ok({
+      challengeId: getTodayChallengeId(type),
+      provider: defaultChallengeProvider,
+    }),
+  );
+});
+
+app.get('/v0/qixun/challenge/rankTotal', (_req, res) => res.json(ok(0)));
+
+app.get('/v0/qixun/challenge/getGameInfo', (req, res) => {
+  const type = String(req.query.type || 'china');
+  return res.json(ok(makeReadyGameInfo(type)));
+});
+
+app.get('/v0/qixun/challenge/getDailyChallengeRank', (_req, res) => {
+  return res.json(
+    ok({
+      moreThan: null,
+      percent: null,
+      rank: null,
+      total: null,
     }),
   );
 });

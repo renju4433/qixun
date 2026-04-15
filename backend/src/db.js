@@ -20,8 +20,8 @@ async function initDb() {
       icon VARCHAR(255) NOT NULL DEFAULT '',
       \`desc\` VARCHAR(255) NULL,
       province VARCHAR(32) NULL,
-      rating INT NOT NULL DEFAULT 1000,
-      puzzle_rating INT NOT NULL DEFAULT 1000,
+      rating INT NOT NULL DEFAULT 1200,
+      puzzle_rating INT NOT NULL DEFAULT 1200,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -37,28 +37,6 @@ async function initDb() {
       INDEX idx_expires_at(expires_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
   `);
-
-  // 兼容旧字段：china_rating -> puzzle_rating
-  const [cols] = await pool.query(
-    `SELECT COLUMN_NAME
-       FROM INFORMATION_SCHEMA.COLUMNS
-      WHERE TABLE_SCHEMA = DATABASE()
-        AND TABLE_NAME = 'users'`,
-  );
-  const colSet = new Set(cols.map((c) => c.COLUMN_NAME));
-
-  if (!colSet.has('puzzle_rating')) {
-    await pool.query(
-      'ALTER TABLE users ADD COLUMN puzzle_rating INT NOT NULL DEFAULT 1000',
-    );
-  }
-
-  if (colSet.has('china_rating')) {
-    await pool.query(
-      'UPDATE users SET puzzle_rating = china_rating WHERE puzzle_rating IS NULL OR puzzle_rating = 1000',
-    );
-    await pool.query('ALTER TABLE users DROP COLUMN china_rating');
-  }
 }
 
 module.exports = { pool, initDb };
