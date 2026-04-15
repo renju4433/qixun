@@ -10,6 +10,7 @@
 
 const Stockfish = require('../../engine/stockfish-18.js');
 const mysql = require('mysql2/promise');
+const path = require('path');
 
 // 配置
 const CONFIG = {
@@ -18,7 +19,7 @@ const CONFIG = {
     if (idx >= 0 && process.argv[idx + 1]) return parseInt(process.argv[idx + 1], 10);
     return 50;
   })(),
-  MIN_DEPTH: 15, // 深度调整为15
+  MIN_DEPTH: 20, // 深度调整为15
   MIN_CP_DIFF: 120,
 };
 
@@ -153,16 +154,31 @@ async function analyzeWithStockfish(engine, fen) {
   return new Promise((resolve) => {
     const moves = [];
     let completed = false;
-    
-    const timeout = setTimeout(() => {
-      if (!completed) {
-        completed = true;
-        engine.onmessage = null;
-        resolve({ moves: [] });
-      }
-    }, 15000); // 15秒超时
+    const prevListener = engine.listener;
+    const prevOnMessage = engine.onmessage;
 
-    engine.onmessage = (msg) => {
+    const sendCommand = (cmd) => {
+      if (typeof engine.processCommand === 'function') {
+        engine.processCommand(cmd);
+        return;
+      }
+      if (typeof engine.postMessage === 'function') {
+        engine.postMessage(cmd);
+        return;
+      }
+      if (typeof engine.ccall === 'function') {
+        engine.ccall('command', null, ['string'], [cmd]);
+        return;
+      }
+      if (typeof engine._command === 'function') {
+        engine._command(cmd);
+        return;
+      }
+      throw new Error('Stockfish engine command API not found');
+    };
+
+    const onEngineMessage = (raw) => {
+      const msg = String(raw || '');
       if (completed) return;
 
       // 解析 info 行
@@ -189,17 +205,47 @@ async function analyzeWithStockfish(engine, fen) {
       if (msg.includes('bestmove')) {
         clearTimeout(timeout);
         completed = true;
-        engine.onmessage = null;
+        engine.listener = prevListener;
+        engine.onmessage = prevOnMessage;
         resolve({ moves });
       }
     };
 
+    const timeout = setTimeout(() => {
+      if (!completed) {
+        completed = true;
+        engine.listener = prevListener;
+        engine.onmessage = prevOnMessage;
+        resolve({ moves: [] });
+      }
+    }, 15000); // 15秒超时
+
+    // Stockfish.js(18) in Node uses listener/processCommand, while older wrappers use onmessage/postMessage
+    engine.listener = onEngineMessage;
+    engine.onmessage = onEngineMessage;
+
     // 发送到 Stockfish
-    engine.postMessage(`setoption name Threads value 32`);
-    engine.postMessage(`setoption name MultiPV value 99`);
-    engine.postMessage(`position fen ${fen}`);
-    engine.postMessage(`go depth ${CONFIG.MIN_DEPTH}`);
+    sendCommand(`setoption name Threads value 32`);
+    sendCommand(`setoption name MultiPV value 99`);
+    sendCommand(`position fen ${fen}`);
+    sendCommand(`go depth ${CONFIG.MIN_DEPTH}`);
   });
+}
+
+async function waitEngineReady(engine, timeoutMs = 20000) {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    if (
+      typeof engine.processCommand === 'function' ||
+      typeof engine.postMessage === 'function' ||
+      typeof engine.ccall === 'function' ||
+      typeof engine._command === 'function'
+    ) {
+      return;
+    }
+    await new Promise((r) => setTimeout(r, 50));
+  }
+  throw new Error('Stockfish engine API not ready');
 }
 
 /**
@@ -223,7 +269,29 @@ async function main() {
 
   // 初始化 Stockfish
   console.log('⏳ 启动 Stockfish...');
-  const engine = await Stockfish();
+  const stockfishWasm = path.resolve(__dirname, '../../engine/stockfish-18.wasm');
+  let engine = await Stockfish({
+    locateFile(fileName) {
+      if (fileName.endsWith('.wasm')) return stockfishWasm;
+      return fileName;
+    },
+  });
+  // 某些构建会先返回初始化函数，需要再调用一次
+  if (
+    typeof engine === 'function' &&
+    typeof engine.processCommand !== 'function' &&
+    typeof engine.postMessage !== 'function' &&
+    typeof engine.ccall !== 'function' &&
+    typeof engine._command !== 'function'
+  ) {
+    engine = await engine({
+      locateFile(fileName) {
+        if (fileName.endsWith('.wasm')) return stockfishWasm;
+        return fileName;
+      },
+    });
+  }
+  await waitEngineReady(engine);
   console.log('✓ Stockfish 已启动\n');
 
   // 数据库连接
