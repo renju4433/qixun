@@ -3,6 +3,7 @@ import styles from './style.less';
 
 type ChessboardProps = {
   fen?: string | null;
+  onMove?: (move: { from: string; to: string; piece: string }) => void;
 };
 
 declare global {
@@ -29,6 +30,9 @@ const CHESSBOARD_JS_URLS = [
   'https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js',
   'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js',
 ];
+
+const PIECE_THEME =
+  'https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/dist/img/chesspieces/wikipedia/{piece}.png';
 
 const ensureCss = (id: string, href: string) => {
   if (document.getElementById(id)) return;
@@ -73,7 +77,7 @@ const loadFirstAvailableScript = async (idPrefix: string, urls: string[]) => {
   throw lastError || new Error(`load failed: ${idPrefix}`);
 };
 
-const Chessboard: FC<ChessboardProps> = ({ fen }) => {
+const Chessboard: FC<ChessboardProps> = ({ fen, onMove }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const boardRef = useRef<any>(null);
   const [ready, setReady] = useState(false);
@@ -93,8 +97,18 @@ const Chessboard: FC<ChessboardProps> = ({ fen }) => {
         if (cancelled || !containerRef.current || !window.Chessboard) return;
         boardRef.current = window.Chessboard(containerRef.current, {
           position: validFen,
-          draggable: false,
+          draggable: true,
           showNotation: true,
+          pieceTheme: PIECE_THEME,
+          onDrop: (source: string, target: string, piece: string) => {
+            if (!source || !target || source === target) return 'snapback';
+            onMove?.({
+              from: source,
+              to: target,
+              piece,
+            });
+            return undefined;
+          },
         });
         setError('');
         setReady(true);

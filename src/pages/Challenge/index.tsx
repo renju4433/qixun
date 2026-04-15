@@ -67,6 +67,7 @@ const Match = () => {
   }));
 
   const [currentFen, setCurrentFen] = useState<string>('');
+  const [userMove, setUserMove] = useState<string>('');
   const isDailyChessChallenge = Boolean(
     challengeId && /^daily-\d{4}-\d{2}-\d{2}-chess$/.test(challengeId),
   );
@@ -175,7 +176,24 @@ const Match = () => {
     <div className={styles.wrapper}>
       {!roundResult && !gameEndVisible && (
         <div className={styles.chessboardWrap}>
-          <Chessboard fen={currentFen} />
+          <Chessboard
+            fen={currentFen}
+            onMove={({ from, to }) => {
+              setUserMove(`${from}${to}`);
+            }}
+          />
+          {isDailyChessChallenge && userMove && (
+            <div
+              style={{
+                marginTop: 12,
+                color: '#f5f5f5',
+                fontSize: '1rem',
+                textAlign: 'center',
+              }}
+            >
+              当前作答: {userMove}
+            </div>
+          )}
         </div>
       )}
       {/* 比赛结果 */}
