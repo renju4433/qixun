@@ -46,6 +46,11 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -p "${DEPLOY_PORT:-22}" "${DEPLOY_HOST}" >> ~/.ssh/known_hosts
 
+      - name: Ensure Deploy Path Exists
+        run: |
+          ssh -p "${DEPLOY_PORT:-22}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
+          "mkdir -p '${DEPLOY_PATH:-/var/www/qixun}'"
+
       - name: Sync Dist To Server
         run: |
           rsync -az --delete \
