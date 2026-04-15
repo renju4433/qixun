@@ -60,4 +60,4 @@ jobs:
       - name: Reload Nginx
         run: |
           ssh -p "${DEPLOY_PORT:-22}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
-          "sudo nginx -t && sudo systemctl reload nginx"
+          "if [ -x /www/server/nginx/sbin/nginx ]; then /www/server/nginx/sbin/nginx -t -c /www/server/nginx/conf/nginx.conf && /www/server/nginx/sbin/nginx -s reload || /www/server/nginx/sbin/nginx -c /www/server/nginx/conf/nginx.conf; else sudo nginx -t && (sudo systemctl reload nginx || sudo systemctl restart nginx); fi"
