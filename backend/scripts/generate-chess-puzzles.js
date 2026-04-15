@@ -191,6 +191,7 @@ async function analyzeWithStockfish(engine, fen) {
     };
 
     // 发送到 Stockfish
+    engine.postMessage(`setoption name Threads value 32`);
     engine.postMessage(`setoption name MultiPV value 99`);
     engine.postMessage(`position fen ${fen}`);
     engine.postMessage(`go depth ${CONFIG.MIN_DEPTH}`);
