@@ -16,8 +16,8 @@ declare global {
 const isFen = (text: string) => /^([pnbrqkPNBRQK1-8]+\/){7}[pnbrqkPNBRQK1-8]+ [wb] /.test(text);
 
 const CHESSBOARD_CSS_URLS = [
-  'https://cdn.jsdelivr.net/npm/chessboardjs@1.0.0/www/css/chessboard-1.0.0.min.css',
-  'https://unpkg.com/chessboardjs@1.0.0/www/css/chessboard-1.0.0.min.css',
+  'https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css',
+  'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css',
 ];
 
 const JQUERY_URLS = [
@@ -26,8 +26,8 @@ const JQUERY_URLS = [
 ];
 
 const CHESSBOARD_JS_URLS = [
-  'https://cdn.jsdelivr.net/npm/chessboardjs@1.0.0/www/js/chessboard-1.0.0.min.js',
-  'https://unpkg.com/chessboardjs@1.0.0/www/js/chessboard-1.0.0.min.js',
+  'https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js',
+  'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js',
 ];
 
 const ensureCss = (id: string, href: string) => {
