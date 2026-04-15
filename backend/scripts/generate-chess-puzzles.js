@@ -133,7 +133,7 @@ function generateRandomFen() {
   }
 
   // 其他 FEN 部分
-  const side = Math.random() > 0.5 ? 'w' : 'b';
+  const side = 'w';
   const castling = '-'; // 随机放置，不允许易位
   const enpassant = '-';
   const halfmove = 0;
@@ -191,6 +191,7 @@ async function analyzeWithStockfish(engine, fen) {
     };
 
     // 发送到 Stockfish
+    engine.postMessage(`setoption name MultiPV value 99`);
     engine.postMessage(`position fen ${fen}`);
     engine.postMessage(`go depth ${CONFIG.MIN_DEPTH}`);
   });
