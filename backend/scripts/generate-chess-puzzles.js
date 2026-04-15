@@ -8,12 +8,16 @@
  *   node backend/scripts/generate-chess-puzzles.js --count 100
  */
 
-const Stockfish = require('../engine/stockfish-18.js');
-const { Pool } = require('mysql2/promise');
+const Stockfish = require('../../engine/stockfish-18.js');
+const mysql = require('mysql2/promise');
 
 // 配置
 const CONFIG = {
-  PUZZLE_COUNT: parseInt(process.argv[3] || 50),
+  PUZZLE_COUNT: (() => {
+    const idx = process.argv.findIndex((x) => x === '--count');
+    if (idx >= 0 && process.argv[idx + 1]) return parseInt(process.argv[idx + 1], 10);
+    return 50;
+  })(),
   MIN_DEPTH: 15, // 深度调整为15
   MIN_CP_DIFF: 120,
 };
@@ -223,7 +227,7 @@ async function main() {
   console.log('✓ Stockfish 已启动\n');
 
   // 数据库连接
-  const pool = new Pool({
+  const pool = mysql.createPool({
     host: process.env.DB_HOST || '127.0.0.1',
     port: parseInt(process.env.DB_PORT || 3306),
     user: process.env.DB_USER || 'root',

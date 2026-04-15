@@ -177,7 +177,7 @@ app.post('/v0/phone/getCodeV3', (req, res) => {
   return res.json(ok(null));
 });
 
-app.post('/register', async (req, res) => {
+app.all('/register', async (req, res) => {
   try {
     const userName = readParam(req, 'userName', 'username', 'user_name');
     const password = readParam(req, 'password', 'pwd');
@@ -311,6 +311,34 @@ app.get('/v0/qixun/challenge/getDailyChallengeRank', (_req, res) => {
       percent: null,
       rank: null,
       total: null,
+    }),
+  );
+});
+
+app.get('/v0/qixun/challenge/rankFriend', (_req, res) => {
+  return res.json(
+    ok({
+      rank: [],
+      total: 0,
+    }),
+  );
+});
+
+app.get('/v0/qixun/challenge/rankAll', (_req, res) => {
+  return res.json(
+    ok({
+      rank: [],
+      total: 0,
+    }),
+  );
+});
+
+app.get('/v0/qixun/challenge/start', async (req, res) => {
+  const gameId = String(req.query.gameId || '').trim();
+  if (!gameId) return res.json(fail('gameId不能为空'));
+  return res.json(
+    ok({
+      challengeId: gameId,
     }),
   );
 });

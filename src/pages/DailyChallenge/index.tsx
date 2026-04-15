@@ -2,7 +2,6 @@ import init from '@/components/Admin/Init';
 import DailyChallengeInfo from '@/components/Game/DailyChanllenge/Info';
 import DailyChallengeRank from '@/components/Game/DailyChanllenge/Rank';
 import Header from '@/components/Header';
-import { CFBizUri } from '@/constants';
 import {
   checkDrawDailyChalelnge,
   drawDailyChalelnge,
