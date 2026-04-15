@@ -34,17 +34,24 @@ const DailyChallenge = () => {
     user: model.initialState?.user,
   }));
 
+  const chessTypeMap = {
+    gomoku: '五子棋',
+    xiangqi: '中国象棋',
+    chess: '国际象棋',
+  };
+
   const navigator = useNavigate();
 
   useDevTools();
 
-  const { type = 'china' } = useParams<{ type: DailyChallengeType }>();
+  const { type = 'gomoku' } = useParams<{ type: DailyChallengeType }>();
   const [challengers, setChallengers] = useState<number>(0);
   const [myChallengeRank, setMyChallengeRank] =
     useState<API.MyDailyChallengeRank | null>(null);
   const [myRank, setMyRank] = useState<{
-    china: number | null;
-    world: number | null;
+    gomoku: number | null;
+    xiangqi: number | null;
+    chess: number | null;
   } | null>(null);
 
   useEffect(init, []);
@@ -53,8 +60,8 @@ const DailyChallenge = () => {
   });
 
   // 更改类型
-  const handleChangeType = (type: DailyChallengeType) => {
-    history.replace(`/daily-challenge/${type}`);
+  const handleChangeType = (newType: DailyChallengeType) => {
+    history.replace(`/daily-challenge/${newType}`);
   };
 
   // 每日挑战完成后抽奖
@@ -77,31 +84,34 @@ const DailyChallenge = () => {
         });
         setMyChallengeRank(myChallengeRankRes);
 
-        // 获取另外一个类型的比赛信息
-        const { data: otherGameData } = await getGameInfo({
-          day: 1,
-          type: type === 'china' ? 'world' : 'china',
-        });
-        if (otherGameData) {
-          const { data: otherMyChallengeRankRes } =
-            await getMyDailyChallengeRank({
-              gameId: otherGameData.id,
-              challengeId: otherGameData.challengeId,
-            });
-          setMyRank({
-            china:
-              type === 'china'
-                ? myChallengeRankRes?.rank
-                : otherMyChallengeRankRes?.rank,
-            world:
-              type === 'world'
-                ? myChallengeRankRes?.rank
-                : otherMyChallengeRankRes?.rank,
+        // 获取其他两个类型的比赛信息
+        const allTypes: DailyChallengeType[] = ['gomoku', 'xiangqi', 'chess'];
+        const otherTypes = allTypes.filter(t => t !== type);
+        const otherRanks: { [key: string]: number | null } = {};
+
+        for (const otherType of otherTypes) {
+          const { data: otherGameData } = await getGameInfo({
+            day: 1,
+            type: otherType,
           });
+          if (otherGameData) {
+            const { data: otherMyChallengeRankRes } =
+              await getMyDailyChallengeRank({
+                gameId: otherGameData.id,
+                challengeId: otherGameData.challengeId,
+              });
+            otherRanks[otherType] = otherMyChallengeRankRes?.rank || null;
+          }
         }
+
+        setMyRank({
+          gomoku: type === 'gomoku' ? myChallengeRankRes?.rank : otherRanks['gomoku'],
+          xiangqi: type === 'xiangqi' ? myChallengeRankRes?.rank : otherRanks['xiangqi'],
+          chess: type === 'chess' ? myChallengeRankRes?.rank : otherRanks['chess'],
+        });
       }
     },
-    onError: () => {},
+    onError: () => { },
   });
 
   // 获取挑战ID
@@ -188,139 +198,71 @@ const DailyChallenge = () => {
             </Badge>
             <WarningChecker />
             <p>
-              每日0点更新，所有人统一。两个模式各5个题目，前两题为移动，后三题为固定，每题5000分，满分25000分。完成两项可以在本页抽取棋寻会员。
+              每日0点更新，所有人统一。三个模式各5个题目，每题5000分，满分25000分。
               <b>
-                作弊（开小号、网络搜索、获取他人答案）会清空成绩并短期封禁。
+                作弊（开小号、使用棋软、获取他人答案）会清空成绩并短期封禁。
               </b>
             </p>
             <Divider />
 
-            {/*消息*/}
-            {drawResult &&
-              drawResult.status !== 'not_finish' &&
-              new Date().getTime() >= 1738080000000 &&
-              new Date().getTime() <= 1738166400000 && (
-                <div className={styles.newYear}>
-                  <div className={styles.first}>辰龙辞 极浦拂尘呈玉宇</div>
-                  <div className={styles.first}>螣蛇起 蛟河赴海献金平</div>
-                  <div
-                    className={styles.third}
-                    style={{
-                      marginBottom: 8,
-                    }}
-                  >
-                    祝各位玩家2025年春节快乐，新年大吉！
-                  </div>
-                  {/*<div style={{ height: '16px' }}></div>*/}
-                  {/*<Button*/}
-                  {/*  onClick={() => {*/}
-                  {/*    navigator('/2024');*/}
-                  {/*  }}*/}
-                  {/*  shape="round"*/}
-                  {/*  size="large"*/}
-                  {/*>*/}
-                  {/*  棋寻2024年度报告*/}
-                  {/*</Button>*/}
-                  {/* <div className={styles.third}>
-                    中国供题(部分): @728, 全球供题: @Det.RZ
-                  </div> */}
-                  <Divider />
-                </div>
-              )}
-
-            {/*抽奖*/}
-            {drawResult && drawResult.status !== 'not_finish' && (
-              <div className={styles.drawContainer}>
-                <div className={styles.title}>完成两项后抽棋寻会员</div>
-                <div className={styles.desc}>有机会中7日会员</div>
-                {!drawResult.drawResult && (
-                  <Button
-                    size="large"
-                    type="dashed"
-                    onClick={draw}
-                    className={styles.button}
-                  >
-                    抽
-                  </Button>
-                )}
-                {drawResult.drawResult &&
-                  drawResult.drawResult.result === '7_days' && (
-                    <div className={styles.ok} style={{ color: 'green' }}>
-                      你抽中了7天会员
-                    </div>
-                  )}
-                {drawResult.drawResult &&
-                  !drawResult.drawResult.result &&
-                  isAprilFoolMemberDay() && (
-                    <div
-                      className={styles.ok}
-                      style={{ color: 'green', cursor: 'pointer' }}
-                      onClick={() =>
-                        Modal.info({
-                          title: '愚人节快乐',
-                          content: '其实并没有中奖哦～',
-                          okText: '知道了',
-                        })
-                      }
-                    >
-                      你抽中了7天会员
-                    </div>
-                  )}
-                {drawResult.drawResult &&
-                  !drawResult.drawResult.result &&
-                  !isAprilFoolMemberDay() && (
-                    <div className={styles.not_ok}>今天没中，明天再来吧</div>
-                  )}
-                <Divider />
-              </div>
-            )}
-
             <div className={styles.dailyChallengeType}>
               <Badge.Ribbon
-                text={myRank?.china ? `No.${myRank?.china}` : null}
+                text={myRank?.gomoku ? `No.${myRank?.gomoku}` : null}
                 color="#00000000"
                 style={{
-                  display: myRank?.china ? 'block' : 'none',
-                  overflow: myRank?.china ? 'visible' : 'hidden',
+                  display: myRank?.gomoku ? 'block' : 'none',
+                  overflow: myRank?.gomoku ? 'visible' : 'hidden',
                   backgroundColor: '#00000000',
                   textShadow: '#fa8c16 1px 1px 5px',
                 }}
               >
                 <a
-                  className={`${styles.dailyChallengeTypeContainer} ${
-                    type === 'china' ? styles.active : ''
-                  }`}
-                  onClick={() => handleChangeType('china')}
+                  className={`${styles.dailyChallengeTypeContainer} ${type === 'gomoku' ? styles.active : ''
+                    }`}
+                  onClick={() => handleChangeType('gomoku')}
                 >
-                  <div className={styles.typeImage}>
-                    <img src={`${CFBizUri}/front/china-white.png`} alt="中国" />
-                  </div>
                   <div className={styles.typeDescription}>
-                    <div className={styles.optionName}>中国</div>
+                    <div className={styles.optionName}>五子棋</div>
                   </div>
                 </a>
               </Badge.Ribbon>
 
               <Badge.Ribbon
-                text={myRank?.world ? `No.${myRank.world}` : null}
+                text={myRank?.xiangqi ? `No.${myRank?.xiangqi}` : null}
                 color="#00000000"
                 style={{
-                  display: myRank?.world ? 'block' : 'none',
-                  overflow: myRank?.world ? 'visible' : 'hidden',
+                  display: myRank?.xiangqi ? 'block' : 'none',
+                  overflow: myRank?.xiangqi ? 'visible' : 'hidden',
                   textShadow: '#fa8c16 1px 1px 5px',
                 }}
               >
                 <a
-                  className={`${styles.dailyChallengeTypeContainer} ${
-                    type === 'world' ? styles.active : ''
-                  }`}
-                  onClick={() => handleChangeType('world')}
+                  className={`${styles.dailyChallengeTypeContainer} ${type === 'xiangqi' ? styles.active : ''
+                    }`}
+                  onClick={() => handleChangeType('xiangqi')}
                 >
-                  <div className={styles.typeImage}>
-                    <img src={`${CFBizUri}/front/world-white.png`} alt="全球" />
-                  </div>
                   <div className={styles.typeDescription}>
-                    <div className={styles.optionName}>全球</div>
+                    <div className={styles.optionName}>中国象棋</div>
+                  </div>
+                </a>
+              </Badge.Ribbon>
+
+              <Badge.Ribbon
+                text={myRank?.chess ? `No.${myRank?.chess}` : null}
+                color="#00000000"
+                style={{
+                  display: myRank?.chess ? 'block' : 'none',
+                  overflow: myRank?.chess ? 'visible' : 'hidden',
+                  textShadow: '#fa8c16 1px 1px 5px',
+                }}
+              >
+                <a
+                  className={`${styles.dailyChallengeTypeContainer} ${type === 'chess' ? styles.active : ''
+                    }`}
+                  onClick={() => handleChangeType('chess')}
+                >
+                  <div className={styles.typeDescription}>
+                    <div className={styles.optionName}>国际象棋</div>
                   </div>
                 </a>
               </Badge.Ribbon>
@@ -328,7 +270,7 @@ const DailyChallenge = () => {
             <p className={styles.challengers}>
               已有
               <span>{challengers ?? 0}</span>
-              名玩家完成{type === 'world' ? '全球' : '中国'}挑战
+              名玩家完成挑战
             </p>
 
             {!gameData || gameData.status === 'ready' ? (

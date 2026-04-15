@@ -117,7 +117,7 @@ export default [
     routes: [
       {
         path: '/daily-challenge',
-        redirect: '/daily-challenge/china',
+        redirect: '/daily-challenge/gomoku',
       },
       {
         path: '/daily-challenge/:type',

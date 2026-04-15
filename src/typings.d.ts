@@ -38,7 +38,7 @@ declare type ViewOptions = {
   pitch: number;
 }; // 街景视图选项
 
-declare type DailyChallengeType = 'china' | 'world'; // 日挑类型
+declare type DailyChallengeType = 'gomoku' | 'xiangqi' | 'chess'; // 日挑类型（五子棋、中国象棋、国际象棋）
 declare type DailyChallengeRankType = 'rankNew' | 'rankFriend'; // 日挑排行类型
 
 declare type StreakType =
