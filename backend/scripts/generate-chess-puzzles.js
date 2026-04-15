@@ -21,6 +21,8 @@ const CONFIG = {
   })(),
   MIN_DEPTH: 20, // 深度调整为15
   MIN_CP_DIFF: 120,
+  ENGINE_THREADS: parseInt(process.env.SF_THREADS || '1', 10),
+  ENGINE_MULTIPV: parseInt(process.env.SF_MULTIPV || '8', 10),
 };
 
 // 子力值
@@ -166,10 +168,6 @@ async function analyzeWithStockfish(engine, fen) {
         engine.postMessage(cmd);
         return;
       }
-      if (typeof engine.ccall === 'function') {
-        engine.ccall('command', null, ['string'], [cmd]);
-        return;
-      }
       if (typeof engine._command === 'function') {
         engine._command(cmd);
         return;
@@ -225,8 +223,8 @@ async function analyzeWithStockfish(engine, fen) {
     engine.onmessage = onEngineMessage;
 
     // 发送到 Stockfish
-    sendCommand(`setoption name Threads value 32`);
-    sendCommand(`setoption name MultiPV value 99`);
+    sendCommand(`setoption name Threads value ${Math.max(1, CONFIG.ENGINE_THREADS)}`);
+    sendCommand(`setoption name MultiPV value ${Math.max(1, CONFIG.ENGINE_MULTIPV)}`);
     sendCommand(`position fen ${fen}`);
     sendCommand(`go depth ${CONFIG.MIN_DEPTH}`);
   });

@@ -53,7 +53,7 @@ export default defineConfig({
   layout: {
     ...defaultSettings,
   },
-  title: '棋寻',
+  title: '棋寻 - 以棋会友',
   metas: [
     { name: 'keywords', content: '棋寻,炒饭社区,网络迷踪,Geoguessr' },
     {
