@@ -67,6 +67,9 @@ const Match = () => {
   }));
 
   const [currentFen, setCurrentFen] = useState<string>('');
+  const isDailyChessChallenge = Boolean(
+    challengeId && /^daily-\d{4}-\d{2}-\d{2}-chess$/.test(challengeId),
+  );
 
   useEffect(() => {
     const candidates = [
@@ -141,13 +144,15 @@ const Match = () => {
     } else if (infinityId) {
     }
 
-    // 连接socket
-    connect();
+    if (!isDailyChessChallenge) {
+      // 连接socket
+      connect();
 
-    // 解决息屏、后台后websocket断开的问题
-    try {
-      document.addEventListener('visibilitychange', wakeUpWebsocket);
-    } catch (error) { }
+      // 解决息屏、后台后websocket断开的问题
+      try {
+        document.addEventListener('visibilitychange', wakeUpWebsocket);
+      } catch (error) { }
+    }
   }, [id, challengeId, streakId, knockoutId, infinityId]);
 
   // 离开页面时候，断开socket
@@ -156,11 +161,13 @@ const Match = () => {
       clearState();
 
       // 退出视图后取消监听
-      try {
-        document.removeEventListener('visibilitychange', wakeUpWebsocket);
-      } catch (error) { }
+      if (!isDailyChessChallenge) {
+        try {
+          document.removeEventListener('visibilitychange', wakeUpWebsocket);
+        } catch (error) { }
+      }
     };
-  }, []);
+  }, [isDailyChessChallenge]);
 
   useDevTools();
 
