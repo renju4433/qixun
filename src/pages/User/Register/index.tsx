@@ -1,56 +1,20 @@
-import { useCaptcha } from '@/hooks/use-captcha';
-import { getCaptchaCodeNew, register } from '@/services/api';
+import { register } from '@/services/api';
 import {
   LockOutlined,
-  MobileOutlined,
   UserOutlined,
 } from '@ant-design/icons';
 import {
   LoginForm,
-  ProFormCaptcha,
   ProFormText,
 } from '@ant-design/pro-components';
 import { setUser } from '@sentry/react';
 import { Link, useModel } from '@umijs/max';
-import { Space, message, notification } from 'antd';
-import { useCallback, useEffect, useRef } from 'react';
+import { Space, message } from 'antd';
 import { flushSync } from 'react-dom';
 import styles from './style.less';
 
 const Register = () => {
   const { initialState, setInitialState } = useModel('@@initialState');
-
-  const phoneRef = useRef<string>('');
-  const captcha = useCaptcha();
-
-  const sendMessage = useCallback(
-    (param) => {
-      getCaptchaCodeNew({
-        phone: phoneRef.current,
-        captchaVerifyParam: param,
-      }).then((res) => {
-        if (res.success) {
-          notification.success({
-            message: '获取验证码成功！',
-            description: '验证码已经发送到你的手机，请注意查收！',
-          });
-        }
-      });
-    },
-    [phoneRef.current],
-  );
-
-  useEffect(() => {
-    captcha((param) => {
-      setTimeout(() => {
-        sendMessage(param);
-      }, 200);
-      return {
-        captchaResult: true,
-        bizResult: true,
-      };
-    });
-  }, []);
 
   // 获取用户信息
   const fetchUserInfo = async () => {
@@ -137,42 +101,6 @@ const Register = () => {
             prefix: <LockOutlined className="prefixIcon" />,
           }}
           rules={[{ required: true, message: '请输入密码！' }]}
-        />
-
-        <ProFormText
-          fieldProps={{
-            size: 'large',
-            prefix: <MobileOutlined className="prefixIcon" />,
-          }}
-          name="phone"
-          label="手机号"
-          placeholder="请输入手机号"
-          rules={[
-            { required: true, message: '请输入手机号！' },
-            { pattern: /^1\d{10}$/, message: '手机号格式错误！' },
-          ]}
-        />
-        <ProFormCaptcha
-          fieldProps={{
-            size: 'large',
-            prefix: <LockOutlined className="prefixIcon" />,
-          }}
-          captchaProps={{ size: 'large' }}
-          placeholder="请输入验证码"
-          label="验证码"
-          captchaTextRender={(timing, count) => {
-            if (timing)
-              return (
-                <div id={'captcha-button'}>{`${count} ${'获取验证码'}`}</div>
-              );
-            return <div id={'captcha-button'}>获取验证码</div>;
-          }}
-          name="code"
-          phoneName="phone"
-          rules={[{ required: true, message: '请输入验证码！' }]}
-          onGetCaptcha={async (phone) => {
-            phoneRef.current = phone;
-          }}
         />
       </LoginForm>
     </div>
