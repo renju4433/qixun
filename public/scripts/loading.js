@@ -4,7 +4,7 @@
  */
 (function () {
   const _root = document.querySelector('#root');
-  document.title = '棋寻 - 探索世界';
+  document.title = '棋寻 - 以棋会友';
   if (_root && _root.innerHTML === '') {
     _root.innerHTML = `
       <style>

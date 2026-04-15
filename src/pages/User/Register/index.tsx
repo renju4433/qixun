@@ -1,11 +1,9 @@
-import WeixinLoginModal from '@/components/User/WeixinLogin';
 import { useCaptcha } from '@/hooks/use-captcha';
 import { getCaptchaCodeNew, register } from '@/services/api';
 import {
   LockOutlined,
   MobileOutlined,
   UserOutlined,
-  WechatOutlined,
 } from '@ant-design/icons';
 import {
   LoginForm,
@@ -14,13 +12,12 @@ import {
 } from '@ant-design/pro-components';
 import { setUser } from '@sentry/react';
 import { Link, useModel } from '@umijs/max';
-import { Button, Divider, Space, message, notification } from 'antd';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Space, message, notification } from 'antd';
+import { useCallback, useEffect, useRef } from 'react';
 import { flushSync } from 'react-dom';
 import styles from './style.less';
 
 const Register = () => {
-  const [wxModalOpen, setWxModalOpen] = useState<boolean>(false);
   const { initialState, setInitialState } = useModel('@@initialState');
 
   const phoneRef = useRef<string>('');
@@ -72,7 +69,7 @@ const Register = () => {
           id: userInfo.userId,
           username: userInfo.userName,
         });
-      } catch (error) {}
+      } catch (error) { }
     }
   };
 
@@ -93,14 +90,14 @@ const Register = () => {
         }
         return;
       }
-    } catch (error) {}
+    } catch (error) { }
   };
 
   return (
     <div className={styles.wrapper}>
       <LoginForm
         title="棋寻"
-        subTitle="探索世界"
+        subTitle="以棋会友"
         requiredMark={false}
         actions={
           <Space
@@ -110,16 +107,6 @@ const Register = () => {
             <Link to="/user/login" className={styles.registerLink}>
               已有账号？去登录
             </Link>
-            <Divider>其他方式</Divider>
-            <Button
-              icon={<WechatOutlined />}
-              shape="round"
-              size="large"
-              block
-              onClick={() => setWxModalOpen(true)}
-            >
-              使用微信快速注册
-            </Button>
           </Space>
         }
         submitter={{
@@ -188,7 +175,6 @@ const Register = () => {
           }}
         />
       </LoginForm>
-      <WeixinLoginModal open={wxModalOpen} onOpen={setWxModalOpen} />
     </div>
   );
 };

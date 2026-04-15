@@ -46,7 +46,7 @@ const Header: FC<HeaderProps> = ({ canBack: canBack, showSlogan = false }) => {
       // 设置Sentry用户信息，忽略错误
       try {
         setUser(null);
-      } catch (error) {}
+      } catch (error) { }
     });
 
     // 返回首页
@@ -77,7 +77,7 @@ const Header: FC<HeaderProps> = ({ canBack: canBack, showSlogan = false }) => {
       <header className={styles.headerContainer}>
         <div>
           <HeaderLogo canBack={canBack} className={styles.logoContainer} />
-          {showSlogan && <div className={styles.slogan}>探索世界</div>}
+          {showSlogan && <div className={styles.slogan}>以棋会友</div>}
         </div>
         {isInApp ? (
           <div></div>

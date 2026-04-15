@@ -7,7 +7,7 @@ const Settings: ProLayoutProps & {
   pwa?: boolean;
   logo?: string;
 } = {
-  title: '棋寻 - 探索世界',
+  title: '棋寻 - 以棋会友',
   pwa: true,
 };
 

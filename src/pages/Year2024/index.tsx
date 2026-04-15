@@ -1490,7 +1490,7 @@ const Year2024: React.FC = () => {
               <div
                 style={{ textAlign: 'center', fontSize: 48, whiteSpace: 'pre' }}
               >
-                「探索世界」
+                「以棋会友」
               </div>
               <br />
               <Button

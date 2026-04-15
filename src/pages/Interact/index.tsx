@@ -123,7 +123,7 @@ const Interact = () => {
   return (
     <NormalPage
       title="互动"
-      desc="探索世界的边界，每次确定需要1宝石（会员免费），该模式不允许使用互联网搜索"
+      desc="以棋会友的边界，每次确定需要1宝石（会员免费），该模式不允许使用互联网搜索"
     >
       <div style={{ textAlign: 'center', margin: '0.5rem 0' }}>
         <Button onClick={() => history.push('/interact/create')}>出题</Button>

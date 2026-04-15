@@ -117,22 +117,22 @@ export default () => {
     setType(data.type);
     switch (data.type) {
       case 'challenge':
-        document.title = '题库经典五题 - 棋寻 - 探索世界';
+        document.title = '题库经典五题 - 棋寻 - 以棋会友';
         break;
       case 'infinity':
-        document.title = '题库无限模式 - 棋寻 - 探索世界';
+        document.title = '题库无限模式 - 棋寻 - 以棋会友';
         break;
       case 'map_country_streak':
-        document.title = '题库国家连胜 - 棋寻 - 探索世界';
+        document.title = '题库国家连胜 - 棋寻 - 以棋会友';
         break;
       case 'daily_challenge':
-        document.title = '每日挑战 - 棋寻 - 探索世界';
+        document.title = '每日挑战 - 棋寻 - 以棋会友';
         break;
       case 'country_streak':
-        document.title = '国家连胜 - 棋寻 - 探索世界';
+        document.title = '国家连胜 - 棋寻 - 以棋会友';
         break;
       case 'province_streak':
-        document.title = '省份连胜 - 棋寻 - 探索世界';
+        document.title = '省份连胜 - 棋寻 - 以棋会友';
         break;
       default:
         break;

@@ -3,7 +3,6 @@ import sync from '@/components/Admin/Mgr';
 import WarningChecker from '@/components/TimeChekcer';
 import { useDevTools } from '@/hooks/use-dev-tools';
 import { listActivities } from '@/services/api';
-import { Image } from 'antd';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './style.less';
@@ -81,11 +80,6 @@ export default function HomePage() {
               className={styles.card}
               onClick={() => navigator('/daily-challenge')}
             >
-              <Image
-                style={{ width: 50, height: 50, marginRight: 10 }}
-                preview={false}
-                src="https://b68v.daai.fun/front/daily_challenge_icon.png?x-oss-process=image/resize,h_200"
-              />
               <div>每日挑战</div>
             </div>
             <div
@@ -94,35 +88,15 @@ export default function HomePage() {
                 navigator('/match')
               }
             >
-              <Image
-                style={{ width: 50, height: 50, marginRight: 10 }}
-                preview={false}
-                src="https://b68v.daai.fun/front/match_battle.png?x-oss-process=image/resize,h_200"
-              />
               &nbsp;&nbsp;&nbsp;匹配&nbsp;&nbsp;&nbsp;
             </div>
             <div className={styles.card} onClick={() => navigator('/party')}>
-              <Image
-                style={{ width: 50, height: 50, marginRight: 10 }}
-                preview={false}
-                src="https://b68v.daai.fun/front/party_icon.png?x-oss-process=image/resize,h_200"
-              />
               &nbsp;&nbsp;&nbsp;派对&nbsp;&nbsp;&nbsp;
             </div>
             <div className={styles.card} onClick={() => navigator('/maps')}>
-              <Image
-                style={{ width: 50, height: 50, marginRight: 10 }}
-                preview={false}
-                src="https://b68v.daai.fun/front/maps_icon.png?x-oss-process=image/resize,h_200"
-              />
               &nbsp;&nbsp;&nbsp;题库&nbsp;&nbsp;&nbsp;
             </div>
             <div className={styles.card} onClick={() => navigator('/interact')}>
-              <Image
-                style={{ width: 50, height: 50, marginRight: 10 }}
-                preview={false}
-                src="https://b68v.daai.fun/front/interact.png?x-oss-process=image/resize,h_200"
-              />
               &nbsp;&nbsp;&nbsp;互动&nbsp;&nbsp;&nbsp;
             </div>
           </div>
