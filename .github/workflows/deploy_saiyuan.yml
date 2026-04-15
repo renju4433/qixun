@@ -36,6 +36,13 @@ jobs:
       - name: Build
         run: npm run build:no-sentry
 
+      - name: Verify Build Output
+        run: |
+          if grep -R "b68res.daai.fun" -n ./dist; then
+            echo "Build output still contains legacy CDN URL"
+            exit 1
+          fi
+
       - name: Start SSH Agent
         uses: webfactory/ssh-agent@v0.9.0
         with:
@@ -51,9 +58,14 @@ jobs:
           ssh -p "${DEPLOY_PORT:-22}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
           "mkdir -p '${DEPLOY_PATH:-/var/www/qixun}'"
 
+      - name: Clean Deploy Path
+        run: |
+          ssh -p "${DEPLOY_PORT:-22}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
+          "find '${DEPLOY_PATH:-/var/www/qixun}' -mindepth 1 ! -name '.user.ini' -delete"
+
       - name: Sync Dist To Server
         run: |
-          rsync -az --delete \
+          rsync -az \
             --exclude=".user.ini" \
             -e "ssh -p ${DEPLOY_PORT:-22}" \
             ./dist/ "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH:-/var/www/qixun}/"
