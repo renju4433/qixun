@@ -7,6 +7,7 @@
     "analyze": "cross-env ANALYZE=1 API_ENV=prod max build",
     "analyze:dev": "cross-env ANALYZE=1 API_ENV=dev max build",
     "build": "cross-env REACT_APP_ENV=prod API_ENV=prod max build && npm run sentry:sourcemaps",
+    "build:no-sentry": "cross-env REACT_APP_ENV=prod API_ENV=prod max build",
     "build:uat": "cross-env REACT_APP_ENV=uat API_ENV=prod max build",
     "dev": "max dev",
     "postinstall": "max setup",
