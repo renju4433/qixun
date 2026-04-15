@@ -1,11 +1,16 @@
 import { IApi } from '@umijs/max';
 
 const { REACT_APP_ENV = 'dev' } = process.env;
+const { REACT_APP_USE_LEGACY_CDN = 'false' } = process.env;
 
 export default (api: IApi) => {
   api.modifyHTML(($) => {
     // 本地环境跳过
-    if (REACT_APP_ENV === 'dev' || REACT_APP_ENV === 'uat') {
+    if (
+      REACT_APP_ENV === 'dev' ||
+      REACT_APP_ENV === 'uat' ||
+      REACT_APP_USE_LEGACY_CDN !== 'true'
+    ) {
       return $;
     }
 
