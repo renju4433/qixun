@@ -67,7 +67,27 @@ async function getDailyPuzzles(date = null) {
     WHERE id IN (${puzzleIds.join(',')})
   `);
 
-  return puzzles;
+  const puzzleMap = new Map(puzzles.map((p) => [p.id, p]));
+  return puzzleIds.map((id) => puzzleMap.get(id)).filter(Boolean);
+}
+
+async function getDailyPuzzleIds(date = null) {
+  date = date || new Date().toISOString().split('T')[0];
+
+  const [rows] = await pool.query(
+    'SELECT puzzle_ids FROM daily_chess_puzzles WHERE date = ?',
+    [date]
+  );
+
+  if (rows.length === 0) {
+    return [];
+  }
+
+  try {
+    return JSON.parse(rows[0].puzzle_ids);
+  } catch (_) {
+    return [];
+  }
 }
 
 /**
@@ -140,6 +160,7 @@ function scheduleDaily() {
 module.exports = {
   selectDailyPuzzles,
   getDailyPuzzles,
+  getDailyPuzzleIds,
   calculatePuzzleScore,
   checkPuzzleAnswer,
   scheduleDaily,

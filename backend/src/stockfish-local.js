@@ -11,7 +11,7 @@ function findExePath() {
   return null;
 }
 
-function analyzeFenLocal({ fen, depth = 18, timeoutMs = 20000 }) {
+function analyzeFenLocal({ fen, depth = 18, timeoutMs = 999999, multipv = 99 }) {
   return new Promise((resolve, reject) => {
     const exePath = findExePath();
     if (!exePath) {
@@ -116,7 +116,7 @@ function analyzeFenLocal({ fen, depth = 18, timeoutMs = 20000 }) {
     send('uci');
     send('isready');
     send(`setoption name Threads value ${Math.max(1, Number(process.env.SF_THREADS || 1))}`);
-    send(`setoption name MultiPV value ${Math.max(1, Number(process.env.SF_MULTIPV || 8))}`);
+    send(`setoption name MultiPV value ${Math.max(1, Number(multipv || process.env.SF_MULTIPV || 2))}`);
     send('ucinewgame');
     send(`position fen ${fen}`);
     send(`go depth ${Math.max(1, Number(depth || 18))}`);

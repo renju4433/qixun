@@ -10,6 +10,7 @@ const { analyzeFenLocal, findExePath } = require('./stockfish-local');
 const {
   selectDailyPuzzles,
   getDailyPuzzles,
+  getDailyPuzzleIds,
   checkPuzzleAnswer,
   scheduleDaily,
 } = require('./puzzle-service');
@@ -138,13 +139,104 @@ function getTodayChallengeId(type) {
   return `daily-${day}-${type}`;
 }
 
+function parseDailyChallengeId(challengeId) {
+  const text = String(challengeId || '').trim();
+  const match = text.match(/^daily-(\d{4}-\d{2}-\d{2})-([a-z_]+)$/);
+  if (!match) return null;
+  return {
+    date: match[1],
+    type: match[2],
+  };
+}
+
+function makeChessRound(puzzle, roundIndex) {
+  const now = Date.now();
+  return {
+    round: roundIndex + 1,
+    contentType: 'panorama',
+    content: puzzle.fen,
+    fen: puzzle.fen,
+    heading: 0,
+    contentSpeedUp: null,
+    lat: 0,
+    lng: 0,
+    startTime: now,
+    timerStartTime: now,
+    timerGuessStartTime: now,
+    endTime: null,
+    contents: null,
+    isDamageMultiple: false,
+    damageMultiple: 1,
+    obsoleteTeamIds: null,
+    move: false,
+    source: 'qixun_pano',
+    panoId: `chess-${puzzle.id}`,
+    pan: false,
+    zoom: false,
+    vHeading: 0,
+    vZoom: 0,
+    vPitch: 0,
+  };
+}
+
+async function makeChessChallengeGameInfo(challengeId, date) {
+  let puzzles = await getDailyPuzzles(date);
+  if (puzzles.length === 0) {
+    await selectDailyPuzzles();
+    puzzles = await getDailyPuzzles(date);
+  }
+
+  const rounds = puzzles.map((puzzle, index) => makeChessRound(puzzle, index));
+  const currentRound = rounds.length > 0 ? 0 : null;
+  const currentFen = currentRound !== null ? rounds[currentRound].fen : null;
+  const puzzleIds = await getDailyPuzzleIds(date);
+
+  return {
+    id: challengeId,
+    status: currentFen ? 'ongoing' : 'ready',
+    health: 10000,
+    type: 'daily_challenge',
+    challengeId,
+    currentFen,
+    fen: currentFen,
+    player: {
+      totalScore: 0,
+      roundResults: [],
+      guesses: [],
+      lastRoundResult: null,
+      user: defaultChallengeProvider,
+    },
+    rounds,
+    currentRound,
+    roundNumber: rounds.length || 5,
+    roundTimePeriod: 150,
+    roundTimeGuessPeriod: 150,
+    timerStartTime: Date.now(),
+    startTimerPeriod: 0,
+    mapsName: '每日挑战-国际象棋',
+    mapsId: null,
+    teams: null,
+    playerIds: null,
+    requestUserId: null,
+    host: defaultChallengeProvider,
+    puzzleIds,
+  };
+}
+
 function makeReadyGameInfo(type) {
   const challengeId = getTodayChallengeId(type);
+  const mapsNameMap = {
+    gomoku: '每日挑战-五子棋',
+    xiangqi: '每日挑战-中国象棋',
+    chess: '每日挑战-国际象棋',
+    world: '每日挑战-全球',
+    china: '每日挑战-中国',
+  };
   return {
     id: challengeId,
     status: 'ready',
     health: 10000,
-    type: 'challenge',
+    type: 'daily_challenge',
     challengeId,
     player: {
       totalScore: 0,
@@ -157,7 +249,7 @@ function makeReadyGameInfo(type) {
     roundTimeGuessPeriod: null,
     timerStartTime: null,
     startTimerPeriod: null,
-    mapsName: type === 'world' ? '每日挑战-全球' : '每日挑战-中国',
+    mapsName: mapsNameMap[type] || '每日挑战',
     mapsId: null,
     teams: null,
     playerIds: null,
@@ -300,9 +392,22 @@ app.get('/v0/qixun/challenge/getDailyChallengeInfo', (req, res) => {
 
 app.get('/v0/qixun/challenge/rankTotal', (_req, res) => res.json(ok(0)));
 
-app.get('/v0/qixun/challenge/getGameInfo', (req, res) => {
-  const type = String(req.query.type || 'china');
-  return res.json(ok(makeReadyGameInfo(type)));
+app.get('/v0/qixun/challenge/getGameInfo', async (req, res) => {
+  try {
+    const challengeId = String(req.query.challengeId || '').trim();
+    if (challengeId) {
+      const parsed = parseDailyChallengeId(challengeId);
+      if (parsed?.type === 'chess') {
+        const gameInfo = await makeChessChallengeGameInfo(challengeId, parsed.date);
+        return res.json(ok(gameInfo));
+      }
+    }
+
+    const type = String(req.query.type || 'china');
+    return res.json(ok(makeReadyGameInfo(type)));
+  } catch (err) {
+    return res.json(fail(`获取比赛信息失败: ${err.message}`));
+  }
 });
 
 app.get('/v0/qixun/challenge/getDailyChallengeRank', (_req, res) => {
@@ -418,9 +523,10 @@ app.post('/v0/qixun/chess/local/analyze', async (req, res) => {
     const fen = String(req.body?.fen || '').trim();
     const depth = Number(req.body?.depth || 18);
     const timeoutMs = Number(req.body?.timeoutMs || 20000);
+    const multipv = Number(req.body?.multipv || 2);
     if (!fen) return res.json(fail('fen不能为空'));
 
-    const data = await analyzeFenLocal({ fen, depth, timeoutMs });
+    const data = await analyzeFenLocal({ fen, depth, timeoutMs, multipv });
     return res.json(ok(data));
   } catch (err) {
     return res.json(fail(`本地分析失败: ${err.message}`));

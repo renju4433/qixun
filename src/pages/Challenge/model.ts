@@ -141,6 +141,17 @@ export default () => {
     // 设置初始血条
     setHealth(data.health);
 
+    const currentRoundData =
+      data.rounds && data.currentRound !== null && data.currentRound !== undefined
+        ? data.rounds[data.currentRound]
+        : undefined;
+    const hasChessFen = Boolean(
+      (data as any)?.currentFen ||
+        (data as any)?.fen ||
+        (currentRoundData as any)?.fen ||
+        currentRoundData?.content,
+    );
+
     // === 浏览器通知 Start ===
     if (data.status === 'wait_join' && data.type === 'solo_match') {
       // 匹配成功准备开始
@@ -207,7 +218,7 @@ export default () => {
       // 设置比赛状态
       setStatus(data.status);
 
-      if (['ongoing', 'finish'].includes(data.status)) {
+      if (['ongoing', 'finish'].includes(data.status) && !hasChessFen) {
         if (
           panoId !== lastRoundData?.panoId ||
           round !== lastRoundData?.round
