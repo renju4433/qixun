@@ -27,14 +27,15 @@ export default function HomePage() {
             >
               <div>每日挑战</div>
             </div>
-            <div
+            {/* 匹配模式已关闭 */}
+            {/* <div
               className={styles.card}
               onClick={() =>
                 navigator('/match')
               }
             >
               &nbsp;&nbsp;&nbsp;匹配&nbsp;&nbsp;&nbsp;
-            </div>
+            </div> */}
           </div>
           <div className={styles.footer}>
           </div>

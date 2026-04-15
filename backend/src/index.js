@@ -6,6 +6,12 @@ const cookieParser = require('cookie-parser');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const { pool, initDb } = require('./db');
+const {
+  selectDailyPuzzles,
+  getDailyPuzzles,
+  checkPuzzleAnswer,
+  scheduleDaily,
+} = require('./puzzle-service');
 
 const app = express();
 const port = Number(process.env.PORT || 3002);
@@ -313,12 +319,106 @@ app.get('/v0/qixun/message/check', (_req, res) => res.json(ok(0)));
 app.get('/v0/qixun/vip/check', (_req, res) => res.json(ok(null)));
 app.get('/v0/qixun/vip/checkIsVip', (_req, res) => res.json(ok(false)));
 
+// ========== 国际象棋题库接口 ==========
+
+/**
+ * 获取今日国际象棋题目列表
+ */
+app.get('/v0/qixun/chess/puzzles/daily', async (req, res) => {
+  try {
+    const puzzles = await getDailyPuzzles();
+    return res.json(
+      ok({
+        puzzles: puzzles.map((p) => ({
+          id: p.id,
+          fen: p.fen,
+          moves: JSON.parse(p.moves),
+        })),
+        timePerPuzzle: 150, // 2:30秒
+      })
+    );
+  } catch (err) {
+    return res.json(fail(`获取题目失败: ${err.message}`));
+  }
+});
+
+/**
+ * 获取单个题目详情
+ */
+app.get('/v0/qixun/chess/puzzles/:puzzleId', async (req, res) => {
+  try {
+    const puzzleId = Number(req.params.puzzleId);
+    const [rows] = await pool.query(
+      'SELECT id, fen, best_move, cp_diff, moves, difficulty FROM chess_puzzles WHERE id = ?',
+      [puzzleId]
+    );
+
+    if (rows.length === 0) {
+      return res.json(fail('题目不存在'));
+    }
+
+    const p = rows[0];
+    return res.json(
+      ok({
+        id: p.id,
+        fen: p.fen,
+        bestMove: p.best_move,
+        cpDiff: p.cp_diff,
+        moves: JSON.parse(p.moves),
+        difficulty: p.difficulty,
+      })
+    );
+  } catch (err) {
+    return res.json(fail(`获取题目失败: ${err.message}`));
+  }
+});
+
+/**
+ * 提交答案并获得评分
+ * POST { puzzleId, userMove, timeUsed }
+ */
+app.post('/v0/qixun/chess/puzzles/answer', async (req, res) => {
+  try {
+    const { puzzleId, userMove, timeUsed } = req.body;
+
+    if (!puzzleId || !userMove) {
+      return res.json(fail('参数不完整'));
+    }
+
+    const result = await checkPuzzleAnswer(
+      puzzleId,
+      userMove,
+      timeUsed || 0
+    );
+
+    return res.json(
+      ok({
+        correct: result.correct,
+        score: result.score,
+        bestMove: result.bestMove,
+        message: result.message,
+      })
+    );
+  } catch (err) {
+    return res.json(fail(`答题检查失败: ${err.message}`));
+  }
+});
+
 async function start() {
   await initDb();
+  
   // 清理过期会话
   setInterval(() => {
     pool.query('DELETE FROM user_sessions WHERE expires_at <= NOW()').catch(() => {});
   }, 10 * 60 * 1000).unref();
+
+  // 启动每日题目选择定时任务
+  try {
+    scheduleDaily();
+    console.log('已启动每日题目选择任务');
+  } catch (err) {
+    console.error('启动定时任务失败:', err);
+  }
 
   app.listen(port, () => {
     console.log(`qixun-api listening on :${port}`);
