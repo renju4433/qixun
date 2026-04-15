@@ -349,7 +349,7 @@ app.get('/v0/qixun/chess/puzzles/:puzzleId', async (req, res) => {
   try {
     const puzzleId = Number(req.params.puzzleId);
     const [rows] = await pool.query(
-      'SELECT id, fen, best_move, cp_diff, moves, difficulty FROM chess_puzzles WHERE id = ?',
+      'SELECT id, fen, moves FROM chess_puzzles WHERE id = ?',
       [puzzleId]
     );
 
@@ -362,10 +362,7 @@ app.get('/v0/qixun/chess/puzzles/:puzzleId', async (req, res) => {
       ok({
         id: p.id,
         fen: p.fen,
-        bestMove: p.best_move,
-        cpDiff: p.cp_diff,
         moves: JSON.parse(p.moves),
-        difficulty: p.difficulty,
       })
     );
   } catch (err) {

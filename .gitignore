@@ -17,3 +17,7 @@ yarn.lock
 
 # React Buddy
 /src/dev
+
+# Stockfish engine (only for local puzzle generation)
+/engine
+/backend/engine

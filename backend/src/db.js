@@ -37,6 +37,26 @@ async function initDb() {
       INDEX idx_expires_at(expires_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
   `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS chess_puzzles (
+      id BIGINT PRIMARY KEY AUTO_INCREMENT,
+      fen VARCHAR(255) NOT NULL UNIQUE,
+      moves JSON NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_created_at(created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS daily_chess_puzzles (
+      id BIGINT PRIMARY KEY AUTO_INCREMENT,
+      date DATE NOT NULL UNIQUE,
+      puzzle_ids JSON NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_date(date)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `);
 }
 
 module.exports = { pool, initDb };
