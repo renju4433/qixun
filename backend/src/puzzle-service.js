@@ -32,10 +32,10 @@ async function selectDailyPuzzles() {
   const puzzleIds = puzzles.map(p => p.id);
   
   // 存储今日题目
-  const [result] = await pool.query(
-    `INSERT INTO daily_chess_puzzles (puzzle_id, date, puzzle_ids) 
-     VALUES (?, ?, ?)`,
-    [puzzleIds[0], today, JSON.stringify(puzzleIds)]
+  await pool.query(
+    `INSERT INTO daily_chess_puzzles (date, puzzle_ids) 
+     VALUES (?, ?)`,
+    [today, JSON.stringify(puzzleIds)]
   );
 
   console.log(`✓ 今日(${today})已选题目: ${puzzleIds.join(', ')}`);
@@ -62,7 +62,7 @@ async function getDailyPuzzles(date = null) {
   
   // 获取完整题目信息
   const [puzzles] = await pool.query(`
-    SELECT id, fen, moves 
+    SELECT id, fen 
     FROM chess_puzzles 
     WHERE id IN (${puzzleIds.join(',')})
   `);
@@ -77,20 +77,8 @@ async function getDailyPuzzles(date = null) {
  * @param {number} maxTime - 最大思考时间（秒），默认150秒(2:30)
  * @returns {number} 得分
  */
-function calculatePuzzleScore(cpDiff, timeUsed = 0, maxTime = 150) {
-  // 基础分：5000 * e^(-cpDiff/200)
-  const baseScore = 5000 * Math.exp(-cpDiff / 200);
-  
-  // 如果超时则得0分
-  if (timeUsed > maxTime) {
-    return 0;
-  }
-  
-  // 时间越短，得分越高（奖励快速正确）
-  // 时间系数：1.0 - 0.5 = 0.5 (最少0.5倍，最多1.0倍)
-  const timeCoefficient = 1 - (timeUsed / maxTime) * 0.5;
-  
-  return Math.round(baseScore * timeCoefficient);
+function calculatePuzzleScore() {
+  return 0;
 }
 
 /**
@@ -100,33 +88,21 @@ function calculatePuzzleScore(cpDiff, timeUsed = 0, maxTime = 150) {
  * @param {number} timeUsed - 使用的思考时间
  */
 async function checkPuzzleAnswer(puzzleId, userMove, timeUsed = 0) {
-  const [rows] = await pool.query(`
-    SELECT id, moves FROM chess_puzzles WHERE id = ?
-  `, [puzzleId]);
+  const [rows] = await pool.query(
+    'SELECT id, fen FROM chess_puzzles WHERE id = ?',
+    [puzzleId]
+  );
 
   if (rows.length === 0) {
     return { correct: false, score: 0, message: '题目不存在' };
   }
 
-  const puzzle = rows[0];
-  const moves = JSON.parse(puzzle.moves);
-  
-  // 找到最优走法（评分最高的）
-  const sorted = [...moves].sort((a, b) => b.cp - a.cp);
-  const bestMove = sorted[0].move;
-  const cpDiff = Math.abs(sorted[0].cp - sorted[1].cp);
-
-  const isCorrect = userMove.toLowerCase() === bestMove.toLowerCase();
-  const score = isCorrect ? calculatePuzzleScore(cpDiff, timeUsed) : 0;
-
   return {
-    correct: isCorrect,
-    score,
-    bestMove,
-    cpDiff,
-    message: isCorrect 
-      ? `正确！获得 ${score} 分` 
-      : `错误！正确走法是 ${bestMove}`
+    correct: false,
+    score: 0,
+    bestMove: null,
+    cpDiff: null,
+    message: '当前题库仅存题目(FEN)，未启用答案判定',
   };
 }
 

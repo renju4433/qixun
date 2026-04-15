@@ -42,7 +42,6 @@ async function initDb() {
     CREATE TABLE IF NOT EXISTS chess_puzzles (
       id BIGINT PRIMARY KEY AUTO_INCREMENT,
       fen VARCHAR(255) NOT NULL UNIQUE,
-      moves JSON NOT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       INDEX idx_created_at(created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -57,6 +56,18 @@ async function initDb() {
       INDEX idx_date(date)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
   `);
+
+  // 迁移：只保留题目，不再存 moves/eval
+  const [puzzleCols] = await pool.query(
+    `SELECT COLUMN_NAME
+       FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'chess_puzzles'`,
+  );
+  const puzzleColSet = new Set(puzzleCols.map((c) => c.COLUMN_NAME));
+  if (puzzleColSet.has('moves')) {
+    await pool.query('ALTER TABLE chess_puzzles DROP COLUMN moves');
+  }
 }
 
 module.exports = { pool, initDb };

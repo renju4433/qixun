@@ -1,380 +1,196 @@
 #!/usr/bin/env node
 
 /**
- * 国际象棋题库生成脚本
- * 使用 Stockfish 引擎从随机棋局中生成有效题目
- * 
- * 运行方式:
+ * 国际象棋题目生成脚本（Stockfish API 版）
+ *
+ * 只存题目 FEN，不存走法和估值。
+ *
+ * 用法:
  *   node backend/scripts/generate-chess-puzzles.js --count 100
+ *
+ * 环境变量:
+ *   DB_HOST / DB_PORT / DB_USER / DB_PASSWORD / DB_NAME
+ *   STOCKFISH_API_URL (默认: https://chess-api.com/v1)
  */
 
-const Stockfish = require('../../engine/stockfish-18.js');
 const mysql = require('mysql2/promise');
-const path = require('path');
 
-// 配置
+const hasFlag = (flag) => process.argv.includes(flag);
+const getArg = (name, fallback) => {
+  const idx = process.argv.findIndex((x) => x === name);
+  if (idx >= 0 && process.argv[idx + 1]) return process.argv[idx + 1];
+  return fallback;
+};
+
 const CONFIG = {
-  PUZZLE_COUNT: (() => {
-    const idx = process.argv.findIndex((x) => x === '--count');
-    if (idx >= 0 && process.argv[idx + 1]) return parseInt(process.argv[idx + 1], 10);
-    return 50;
-  })(),
-  MIN_DEPTH: 20, // 深度调整为15
-  MIN_CP_DIFF: 120,
-  ENGINE_THREADS: parseInt(process.env.SF_THREADS || '1', 10),
-  ENGINE_MULTIPV: parseInt(process.env.SF_MULTIPV || '8', 10),
+  PUZZLE_COUNT: parseInt(getArg('--count', '50'), 10),
+  MAX_ATTEMPTS: parseInt(getArg('--max-attempts', '1000'), 10),
+  DEPTH: parseInt(process.env.SF_DEPTH || getArg('--depth', '15'), 10),
+  API_URL: process.env.STOCKFISH_API_URL || getArg('--api-url', 'https://chess-api.com/v1'),
+  ENGINE_LOG: hasFlag('--engine-log') || hasFlag('-v'),
 };
 
-// 子力值
-const PIECE_VALUES = {
-  p: 1, P: 1,
-  n: 3, N: 3,
-  b: 3, B: 3,
-  r: 5, R: 5,
-  q: 9, Q: 9,
-};
-
-/**
- * 计算子力差距
- */
-function calculateMaterialDiff(fen) {
-  const board = fen.split(' ')[0];
-  let white = 0, black = 0;
-  
-  for (const char of board) {
-    const val = PIECE_VALUES[char];
-    if (!val) continue;
-    if (/[A-Z]/.test(char)) white += val;
-    else black += val;
-  }
-  
-  return Math.abs(white - black);
+function randomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-/**
- * 根据子力差距计算接受概率
- * 差距越小，被接受的概率越大
- * @param {number} materialDiff - 子力差距
- * @returns {number} 0-1 之间的概率
- */
-function getMaterialProbability(materialDiff) {
-  // 使用指数衰减函数：e^(-materialDiff/5)
-  // 这样 diff=0 时 prob=1.0, diff=5 时 prob≈0.37, diff=10 时 prob≈0.14
-  return Math.exp(-materialDiff / 5);
-}
-
-/**
- * 生成完全随机的 FEN（随机放置棋子）
- */
 function generateRandomFen() {
-  // 初始化空棋盘
-  let board = Array(8).fill(null).map(() => Array(8).fill('.'));
+  const board = Array(8).fill(null).map(() => Array(8).fill('.'));
 
-  // 白方棋子
   const whitePieces = ['K', 'Q', 'R', 'R', 'B', 'B', 'N', 'N', 'P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'];
-  // 黑方棋子
   const blackPieces = ['k', 'q', 'r', 'r', 'b', 'b', 'n', 'n', 'p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'];
 
-  // 随机放置白方棋子
-  for (const piece of whitePieces) {
-    let placed = false;
-    let attempts = 0;
-    while (!placed && attempts < 50) {
-      const r = Math.floor(Math.random() * 8);
-      const c = Math.floor(Math.random() * 8);
-      
-      // 兵不能在第1和第8行
-      if ((piece === 'P' || piece === 'p') && (r === 0 || r === 7)) {
-        attempts++;
-        continue;
-      }
-      
+  const placePiece = (piece) => {
+    for (let i = 0; i < 80; i++) {
+      const r = randomInt(0, 7);
+      const c = randomInt(0, 7);
+      if ((piece === 'P' || piece === 'p') && (r === 0 || r === 7)) continue;
       if (board[r][c] === '.') {
         board[r][c] = piece;
-        placed = true;
+        return true;
       }
-      attempts++;
     }
-  }
+    return false;
+  };
 
-  // 随机放置黑方棋子
-  for (const piece of blackPieces) {
-    let placed = false;
-    let attempts = 0;
-    while (!placed && attempts < 50) {
-      const r = Math.floor(Math.random() * 8);
-      const c = Math.floor(Math.random() * 8);
-      
-      // 兵不能在第1和第8行
-      if ((piece === 'P' || piece === 'p') && (r === 0 || r === 7)) {
-        attempts++;
-        continue;
-      }
-      
-      if (board[r][c] === '.') {
-        board[r][c] = piece;
-        placed = true;
-      }
-      attempts++;
-    }
-  }
+  whitePieces.forEach(placePiece);
+  blackPieces.forEach(placePiece);
 
-  // FEN 棋盘部分
-  let fen = '';
+  let fenBoard = '';
   for (let r = 0; r < 8; r++) {
     let empty = 0;
     for (let c = 0; c < 8; c++) {
-      const piece = board[r][c];
-      if (piece === '.') {
-        empty++;
-      } else {
+      if (board[r][c] === '.') empty++;
+      else {
         if (empty > 0) {
-          fen += empty;
+          fenBoard += empty;
           empty = 0;
         }
-        fen += piece;
+        fenBoard += board[r][c];
       }
     }
-    if (empty > 0) fen += empty;
-    if (r < 7) fen += '/';
+    if (empty > 0) fenBoard += empty;
+    if (r < 7) fenBoard += '/';
   }
 
-  // 其他 FEN 部分
-  const side = 'w';
-  const castling = '-'; // 随机放置，不允许易位
-  const enpassant = '-';
-  const halfmove = 0;
-  const fullmove = Math.max(1, Math.floor(Math.random() * 100));
-
-  return `${fen} ${side} ${castling} ${enpassant} ${halfmove} ${fullmove}`;
+  const side = Math.random() < 0.5 ? 'w' : 'b';
+  return `${fenBoard} ${side} - - 0 ${randomInt(1, 120)}`;
 }
 
-/**
- * 使用本地 Stockfish-18 分析位置
- */
-async function analyzeWithStockfish(engine, fen) {
-  return new Promise((resolve) => {
-    const moves = [];
-    let completed = false;
-    const prevListener = engine.listener;
-    const prevOnMessage = engine.onmessage;
-
-    const sendCommand = (cmd) => {
-      if (typeof engine.processCommand === 'function') {
-        engine.processCommand(cmd);
-        return;
-      }
-      if (typeof engine.postMessage === 'function') {
-        engine.postMessage(cmd);
-        return;
-      }
-      if (typeof engine._command === 'function') {
-        engine._command(cmd);
-        return;
-      }
-      throw new Error('Stockfish engine command API not found');
-    };
-
-    const onEngineMessage = (raw) => {
-      const msg = String(raw || '');
-      if (completed) return;
-
-      // 解析 info 行
-      if (msg.includes('info') && msg.includes('cp') && msg.includes('pv')) {
-        const depthMatch = msg.match(/depth\s+(\d+)/);
-        const pvMatch = msg.match(/pv\s+(\S+)/);
-        const cpMatch = msg.match(/cp\s+(-?\d+)/);
-
-        if (depthMatch && pvMatch && cpMatch && parseInt(depthMatch[1]) >= CONFIG.MIN_DEPTH) {
-          const move = pvMatch[1];
-          const cp = parseInt(cpMatch[1]);
-
-          const existing = moves.find(m => m.move === move);
-          if (existing) {
-            if (Math.abs(cp) > Math.abs(existing.cp)) {
-              existing.cp = cp;
-            }
-          } else {
-            moves.push({ move, cp });
-          }
-        }
-      }
-
-      if (msg.includes('bestmove')) {
-        clearTimeout(timeout);
-        completed = true;
-        engine.listener = prevListener;
-        engine.onmessage = prevOnMessage;
-        resolve({ moves });
-      }
-    };
-
-    const timeout = setTimeout(() => {
-      if (!completed) {
-        completed = true;
-        engine.listener = prevListener;
-        engine.onmessage = prevOnMessage;
-        resolve({ moves: [] });
-      }
-    }, 15000); // 15秒超时
-
-    // Stockfish.js(18) in Node uses listener/processCommand, while older wrappers use onmessage/postMessage
-    engine.listener = onEngineMessage;
-    engine.onmessage = onEngineMessage;
-
-    // 发送到 Stockfish
-    sendCommand(`setoption name Threads value ${Math.max(1, CONFIG.ENGINE_THREADS)}`);
-    sendCommand(`setoption name MultiPV value ${Math.max(1, CONFIG.ENGINE_MULTIPV)}`);
-    sendCommand(`position fen ${fen}`);
-    sendCommand(`go depth ${CONFIG.MIN_DEPTH}`);
-  });
-}
-
-async function waitEngineReady(engine, timeoutMs = 20000) {
-  const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
-    if (
-      typeof engine.processCommand === 'function' ||
-      typeof engine.postMessage === 'function' ||
-      typeof engine.ccall === 'function' ||
-      typeof engine._command === 'function'
-    ) {
-      return;
-    }
-    await new Promise((r) => setTimeout(r, 50));
-  }
-  throw new Error('Stockfish engine API not ready');
-}
-
-/**
- * 检查题目有效性
- */
-function isValidPuzzle(moves, materialDiff) {
-  if (moves.length < 2) return false;
-
-  // 根据子力差距计算接受概率
-  const probability = getMaterialProbability(materialDiff);
-  return Math.random() < probability;
-}
-
-/**
- * 主函数
- */
-async function main() {
-  console.log('🚀 国际象棋题库生成器');
-  console.log(`📊 目标: 生成 ${CONFIG.PUZZLE_COUNT} 个题目`);
-  console.log(`⚙️  配置: 深度=${CONFIG.MIN_DEPTH}, 最小差距=${CONFIG.MIN_CP_DIFF}cp\n`);
-
-  // 初始化 Stockfish
-  console.log('⏳ 启动 Stockfish...');
-  const stockfishWasm = path.resolve(__dirname, '../../engine/stockfish-18.wasm');
-  let engine = await Stockfish({
-    locateFile(fileName) {
-      if (fileName.endsWith('.wasm')) return stockfishWasm;
-      return fileName;
+async function validateFenByStockfishApi(fen) {
+  const payload = { fen, depth: CONFIG.DEPTH };
+  let res = await fetch(CONFIG.API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
     },
+    body: JSON.stringify(payload),
   });
-  // 某些构建会先返回初始化函数，需要再调用一次
-  if (
-    typeof engine === 'function' &&
-    typeof engine.processCommand !== 'function' &&
-    typeof engine.postMessage !== 'function' &&
-    typeof engine.ccall !== 'function' &&
-    typeof engine._command !== 'function'
-  ) {
-    engine = await engine({
-      locateFile(fileName) {
-        if (fileName.endsWith('.wasm')) return stockfishWasm;
-        return fileName;
-      },
-    });
+  let text = await res.text();
+  let data = null;
+  try {
+    data = JSON.parse(text);
+  } catch (_) {
+    data = null;
   }
-  await waitEngineReady(engine);
-  console.log('✓ Stockfish 已启动\n');
 
-  // 数据库连接
+  // 部分网关对 POST JSON 兼容差，自动回退 GET
+  if ((!res.ok || (data && data.success === false)) && String(data?.error || '').includes('Missing parameter')) {
+    const url = `${CONFIG.API_URL}?fen=${encodeURIComponent(fen)}&depth=${CONFIG.DEPTH}`;
+    res = await fetch(url, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
+    });
+    text = await res.text();
+    try {
+      data = JSON.parse(text);
+    } catch (_) {
+      data = null;
+    }
+  }
+
+  if (CONFIG.ENGINE_LOG) {
+    console.log('[stockfishapi]', data || text.slice(0, 200));
+  }
+
+  // 兼容常见返回格式
+  const raw =
+    (data &&
+      (data.bestmove ||
+        data.bestMove ||
+        data.move ||
+        (data.from && data.to ? `${data.from}${data.to}${data.promotion || ''}` : '') ||
+        data.data?.bestmove ||
+        data.data?.bestMove ||
+        data.data?.move ||
+        data.continuation)) ||
+    '';
+  const bestMove = String(raw).trim();
+
+  if (!res.ok) return { ok: false, reason: `HTTP ${res.status}` };
+  if (!bestMove || bestMove === '(none)' || bestMove === 'none') return { ok: false, reason: 'no bestmove' };
+  return { ok: true, bestMove };
+}
+
+async function main() {
+  console.log('🚀 国际象棋题库生成器（Stockfish API）');
+  console.log(`📊 目标: ${CONFIG.PUZZLE_COUNT} 题`);
+  console.log(`🔗 API: ${CONFIG.API_URL}`);
+  console.log(`⚙️ 深度: ${CONFIG.DEPTH}\n`);
+
   const pool = mysql.createPool({
     host: process.env.DB_HOST || '127.0.0.1',
-    port: parseInt(process.env.DB_PORT || 3306),
+    port: Number(process.env.DB_PORT || 3306),
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME || 'qixun',
-    waitForConnections: true,
-    connectionLimit: 1,
-    queueLimit: 0,
+    connectionLimit: 2,
+    charset: 'utf8mb4',
   });
 
   try {
-    // 初始化表
     await pool.query(`
       CREATE TABLE IF NOT EXISTS chess_puzzles (
         id BIGINT PRIMARY KEY AUTO_INCREMENT,
         fen VARCHAR(255) NOT NULL UNIQUE,
-        moves JSON NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_created_at(created_at)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
 
-    console.log('✓ 数据库表初始化完成\n');
-
     let generated = 0;
     let attempts = 0;
-    const maxAttempts = CONFIG.PUZZLE_COUNT * 15;
 
-    while (generated < CONFIG.PUZZLE_COUNT && attempts < maxAttempts) {
+    while (generated < CONFIG.PUZZLE_COUNT && attempts < CONFIG.MAX_ATTEMPTS) {
       attempts++;
-
-      // 生成随机 FEN
       const fen = generateRandomFen();
-      const materialDiff = calculateMaterialDiff(fen);
 
-      // 检查重复
-      try {
-        const [existing] = await pool.query(
-          'SELECT id FROM chess_puzzles WHERE fen = ? LIMIT 1',
-          [fen]
-        );
-        if (existing.length > 0) {
-          process.stdout.write('.');
-          continue;
-        }
-      } catch (e) {
-        continue;
-      }
-
-      // 分析
-      const { moves } = await analyzeWithStockfish(engine, fen);
-
-      if (!isValidPuzzle(moves, materialDiff)) {
+      const [exists] = await pool.query('SELECT id FROM chess_puzzles WHERE fen = ? LIMIT 1', [fen]);
+      if (exists.length > 0) {
         process.stdout.write('.');
         continue;
       }
 
-      // 保存
-      try {
-        await pool.query(
-          `INSERT INTO chess_puzzles (fen, moves)
-           VALUES (?, ?)`,
-          [fen, JSON.stringify(moves)]
-        );
-
-        generated++;
-        process.stdout.write('✓');
-        if (generated % 10 === 0) {
-          console.log(` [${generated}/${CONFIG.PUZZLE_COUNT}]`);
-        }
-      } catch (e) {
+      console.log(`\n[${attempts}] 验证中: ${fen}`);
+      const check = await validateFenByStockfishApi(fen);
+      if (!check.ok) {
+        console.log(`[${attempts}] 跳过: ${check.reason}`);
         process.stdout.write('.');
+        continue;
       }
+
+      await pool.query('INSERT INTO chess_puzzles (fen) VALUES (?)', [fen]);
+      generated++;
+      process.stdout.write('✓');
+      console.log(` [${generated}/${CONFIG.PUZZLE_COUNT}]`);
     }
 
-    console.log(`\n\n✅ 完成! 生成了 ${generated} 个题目 (尝试 ${attempts} 次)`);
+    console.log(`\n✅ 完成：生成 ${generated} 题，尝试 ${attempts} 次`);
   } catch (err) {
     console.error('❌ 错误:', err);
   } finally {
     await pool.end();
-    if (engine.terminate) engine.terminate();
     process.exit(0);
   }
 }

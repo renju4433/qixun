@@ -2,15 +2,12 @@
 import ChallengeGameEnd from '@/components/Map/ChallengeGameEnd';
 import ChallengeResult from '@/components/Map/ChallengeResult';
 import { ChallengeEmoji } from '@/components/Map/Emoji';
-import GoogleMap from '@/components/Map/GoogleMap/GoolgeMap';
-import MapPicker from '@/components/Map/MapPicker';
 import SoloMatchCountDown from '@/components/Map/SoloMatchCountDown';
+import Chessboard from '@/components/Chess/Chessboard';
 import { useDevTools } from '@/hooks/use-dev-tools';
-import { useLoadGoogle } from '@/hooks/use-load-google';
 import { getGameInfo, joinGame } from '@/services/api';
 import { history, useModel, useParams } from '@umijs/max';
 import { useCallback, useEffect, useState } from 'react';
-import { MapProvider } from 'react-map-gl';
 import styles from './style.less';
 
 const Match = () => {
@@ -48,6 +45,8 @@ const Match = () => {
     roundResult,
     gameEndVisible,
     status,
+    gameData,
+    lastRound,
     connect,
     wakeUpWebsocket,
     clearState,
@@ -59,15 +58,32 @@ const Match = () => {
     status: model.status,
     roundResult: model.roundResult,
     gameEndVisible: model.gameEndVisible,
+    gameData: model.gameData,
+    lastRound: model.lastRound,
     connect: model.connect,
     wakeUpWebsocket: model.wakeUpWebsocket,
     clearState: model.clearState,
     setCanLoad: model.setCanLoad,
   }));
 
-  const [loaded, setLoaded] = useState<boolean>(false);
+  const [currentFen, setCurrentFen] = useState<string>('');
 
-  useLoadGoogle({ setLoaded });
+  useEffect(() => {
+    const candidates = [
+      (lastRound as any)?.fen,
+      (lastRound as any)?.content,
+      (gameData as any)?.fen,
+      (gameData as any)?.currentFen,
+      (gameData as any)?.rounds?.[(gameData as any)?.currentRound ?? 0]?.fen,
+      (gameData as any)?.rounds?.[(gameData as any)?.currentRound ?? 0]?.content,
+    ].filter(Boolean);
+    const fen = candidates.find((x: any) =>
+      typeof x === 'string'
+        ? /^([pnbrqkPNBRQK1-8]+\/){7}[pnbrqkPNBRQK1-8]+ [wb] /.test(x)
+        : false,
+    );
+    if (fen) setCurrentFen(fen as string);
+  }, [gameData, lastRound]);
 
   /**
    * 初始化Challenge
@@ -149,40 +165,28 @@ const Match = () => {
   useDevTools();
 
   return (
-    <MapProvider>
-      <div className={styles.wrapper}>
-        {/* 地图选点 */}
-        {status && status === 'ongoing' && !roundResult && !gameEndVisible && (
-          <MapPicker model="Challenge.model" />
+    <div className={styles.wrapper}>
+      {!roundResult && !gameEndVisible && (
+        <div className={styles.chessboardWrap}>
+          <Chessboard fen={currentFen} />
+        </div>
+      )}
+      {/* 比赛结果 */}
+      {roundResult && !gameEndVisible && (
+        <ChallengeResult model="Challenge.model" />
+      )}
+      {gameEndVisible && <ChallengeGameEnd model="Challenge.model" />}
+      <ChallengeEmoji />
+      {/*匹配倒计时*/}
+      {!roundResult &&
+        !gameEndVisible &&
+        status &&
+        (status === 'ready' ||
+          status === 'wait_join' ||
+          status === 'match_fail') && (
+          <SoloMatchCountDown model="Challenge.model" />
         )}
-        {/* 全景 */}
-        {loaded && (
-          <div
-            className={styles.googleMap}
-            style={
-              roundResult || gameEndVisible ? { display: 'none' } : undefined
-            }
-          >
-            <GoogleMap model="Challenge.model" />
-          </div>
-        )}
-        {/* 比赛结果 */}
-        {roundResult && !gameEndVisible && (
-          <ChallengeResult model="Challenge.model" />
-        )}
-        {gameEndVisible && <ChallengeGameEnd model="Challenge.model" />}
-        <ChallengeEmoji />
-        {/*匹配倒计时*/}
-        {!roundResult &&
-          !gameEndVisible &&
-          status &&
-          (status === 'ready' ||
-            status === 'wait_join' ||
-            status === 'match_fail') && (
-            <SoloMatchCountDown model="Challenge.model" />
-          )}
-      </div>
-    </MapProvider>
+    </div>
   );
 };
 

@@ -6,6 +6,7 @@ const cookieParser = require('cookie-parser');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const { pool, initDb } = require('./db');
+const { analyzeFenLocal, findExePath } = require('./stockfish-local');
 const {
   selectDailyPuzzles,
   getDailyPuzzles,
@@ -360,7 +361,6 @@ app.get('/v0/qixun/chess/puzzles/daily', async (req, res) => {
         puzzles: puzzles.map((p) => ({
           id: p.id,
           fen: p.fen,
-          moves: JSON.parse(p.moves),
         })),
         timePerPuzzle: 150, // 2:30秒
       })
@@ -377,7 +377,7 @@ app.get('/v0/qixun/chess/puzzles/:puzzleId', async (req, res) => {
   try {
     const puzzleId = Number(req.params.puzzleId);
     const [rows] = await pool.query(
-      'SELECT id, fen, moves FROM chess_puzzles WHERE id = ?',
+      'SELECT id, fen FROM chess_puzzles WHERE id = ?',
       [puzzleId]
     );
 
@@ -390,7 +390,6 @@ app.get('/v0/qixun/chess/puzzles/:puzzleId', async (req, res) => {
       ok({
         id: p.id,
         fen: p.fen,
-        moves: JSON.parse(p.moves),
       })
     );
   } catch (err) {
@@ -404,29 +403,33 @@ app.get('/v0/qixun/chess/puzzles/:puzzleId', async (req, res) => {
  */
 app.post('/v0/qixun/chess/puzzles/answer', async (req, res) => {
   try {
-    const { puzzleId, userMove, timeUsed } = req.body;
-
-    if (!puzzleId || !userMove) {
-      return res.json(fail('参数不完整'));
-    }
-
-    const result = await checkPuzzleAnswer(
-      puzzleId,
-      userMove,
-      timeUsed || 0
-    );
-
-    return res.json(
-      ok({
-        correct: result.correct,
-        score: result.score,
-        bestMove: result.bestMove,
-        message: result.message,
-      })
-    );
+    return res.json(fail('当前仅存储题目(FEN)，未启用答案判定', 501));
   } catch (err) {
     return res.json(fail(`答题检查失败: ${err.message}`));
   }
+});
+
+/**
+ * 本地 Stockfish(exe) 分析
+ * POST { fen: string, depth?: number, timeoutMs?: number }
+ */
+app.post('/v0/qixun/chess/local/analyze', async (req, res) => {
+  try {
+    const fen = String(req.body?.fen || '').trim();
+    const depth = Number(req.body?.depth || 18);
+    const timeoutMs = Number(req.body?.timeoutMs || 20000);
+    if (!fen) return res.json(fail('fen不能为空'));
+
+    const data = await analyzeFenLocal({ fen, depth, timeoutMs });
+    return res.json(ok(data));
+  } catch (err) {
+    return res.json(fail(`本地分析失败: ${err.message}`));
+  }
+});
+
+app.get('/v0/qixun/chess/local/health', (_req, res) => {
+  const exePath = findExePath();
+  return res.json(ok({ exePath, ready: !!exePath }));
 });
 
 async function start() {

@@ -21,3 +21,6 @@ yarn.lock
 # Stockfish engine (only for local puzzle generation)
 /engine
 /backend/engine
+
+# local stockfish binary
+/stockfish-windows-x86-64-avx2.exe
