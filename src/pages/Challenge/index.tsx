@@ -4,9 +4,11 @@ import ChallengeResult from '@/components/Map/ChallengeResult';
 import { ChallengeEmoji } from '@/components/Map/Emoji';
 import SoloMatchCountDown from '@/components/Map/SoloMatchCountDown';
 import Chessboard from '@/components/Chess/Chessboard';
+import ChessRoundResult from '@/components/Chess/ChessRoundResult';
 import { useDevTools } from '@/hooks/use-dev-tools';
-import { getGameInfo, joinGame } from '@/services/api';
+import { getGameInfo, joinGame, nextChessChallenge, submitChessChallenge } from '@/services/api';
 import { history, useModel, useParams } from '@umijs/max';
+import { Button, message } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
 import styles from './style.less';
 
@@ -67,7 +69,19 @@ const Match = () => {
   }));
 
   const [currentFen, setCurrentFen] = useState<string>('');
-  const [userMove, setUserMove] = useState<string>('');
+  const [positionHistory, setPositionHistory] = useState<string[]>([]);
+  const [moveHistory, setMoveHistory] = useState<string[]>([]);
+  const [chessRoundResult, setChessRoundResult] = useState<any | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [advancing, setAdvancing] = useState(false);
+  const boardFen = positionHistory[positionHistory.length - 1] || currentFen;
+  const firstMove = moveHistory.length > 0 ? moveHistory[0] : '';
+  const latestMove = moveHistory.length > 0 ? moveHistory[moveHistory.length - 1] : '';
+  const canUndoChessMove = moveHistory.length > 0;
+  const canRestoreChessBoard = positionHistory.length > 1;
+  const canSubmitChessMove =
+    (gameData as any)?.chess?.canSubmit !== false &&
+    !!firstMove;
   const isDailyChessChallenge = Boolean(
     challengeId && /^daily-\d{4}-\d{2}-\d{2}-chess$/.test(challengeId),
   );
@@ -87,7 +101,47 @@ const Match = () => {
         : false,
     );
     if (fen) setCurrentFen(fen as string);
+    setPositionHistory(fen ? [fen as string] : []);
+    setMoveHistory([]);
   }, [gameData, lastRound]);
+
+  const handleSubmitChessMove = async () => {
+    if (!challengeId || !firstMove || !canSubmitChessMove || submitting) return;
+    try {
+      setSubmitting(true);
+      const res = await submitChessChallenge({ challengeId, userMove: firstMove });
+      if (!res.success) {
+        message.error(res.errorMessage || '提交失败');
+        return;
+      }
+      processGameData(res.data.gameInfo as any);
+      setChessRoundResult(res.data.roundResult);
+    } catch (err: any) {
+      message.error(err?.info?.errorMessage || err?.message || '提交失败');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleNextChessRound = async () => {
+    if (!challengeId || advancing) return;
+    try {
+      setAdvancing(true);
+      const res = await nextChessChallenge({ challengeId });
+      if (!res.success) {
+        message.error(res.errorMessage || '进入下一题失败');
+        return;
+      }
+      processGameData(res.data as any);
+      setPositionHistory([]);
+      setMoveHistory([]);
+      setChessRoundResult(null);
+    } catch (err: any) {
+      message.error(err?.info?.errorMessage || err?.message || '进入下一题失败');
+    } finally {
+      setAdvancing(false);
+    }
+  };
 
   /**
    * 初始化Challenge
@@ -174,24 +228,59 @@ const Match = () => {
 
   return (
     <div className={styles.wrapper}>
+      {isDailyChessChallenge && chessRoundResult && (
+        <ChessRoundResult
+          round={Number((gameData as any)?.currentRound ?? 0) + 1}
+          roundNumber={Number((gameData as any)?.roundNumber ?? 5)}
+          roundResult={chessRoundResult}
+          finished={Number((gameData as any)?.currentRound ?? 0) + 1 >= Number((gameData as any)?.roundNumber ?? 5)}
+          onNext={handleNextChessRound}
+          onBack={() => history.push('/daily-challenge/chess')}
+        />
+      )}
       {!roundResult && !gameEndVisible && (
         <div className={styles.chessboardWrap}>
           <Chessboard
-            fen={currentFen}
-            onMove={({ from, to }) => {
-              setUserMove(`${from}${to}`);
+            fen={boardFen}
+            showFenInfo={false}
+            highlightedSquares={latestMove ? [latestMove.slice(0, 2), latestMove.slice(2, 4)] : []}
+            onMove={({ uci, fen }) => {
+              setMoveHistory((prev) => [...prev, uci]);
+              setPositionHistory((prev) => [...prev, fen]);
             }}
           />
-          {isDailyChessChallenge && userMove && (
-            <div
-              style={{
-                marginTop: 12,
-                color: '#f5f5f5',
-                fontSize: '1rem',
-                textAlign: 'center',
-              }}
-            >
-              当前作答: {userMove}
+          {isDailyChessChallenge && (
+            <div className={styles.infoRow}>
+              <div className={styles.infoText}>{currentFen || '等待题目加载...'}</div>
+              <Button
+                shape="round"
+                disabled={!canRestoreChessBoard}
+                onClick={() => {
+                  setMoveHistory([]);
+                  setPositionHistory(currentFen ? [currentFen] : []);
+                }}
+              >
+                复原
+              </Button>
+              <Button
+                shape="round"
+                disabled={!canUndoChessMove}
+                onClick={() => {
+                  setMoveHistory((prev) => prev.slice(0, -1));
+                  setPositionHistory((prev) => (prev.length > 1 ? prev.slice(0, -1) : prev));
+                }}
+              >
+                撤销
+              </Button>
+              <Button
+                type="primary"
+                shape="round"
+                disabled={!canSubmitChessMove || submitting || !!chessRoundResult}
+                loading={submitting}
+                onClick={handleSubmitChessMove}
+              >
+                提交
+              </Button>
             </div>
           )}
         </div>

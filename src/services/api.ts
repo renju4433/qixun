@@ -1890,6 +1890,31 @@ export async function nextRound(
   });
 }
 
+export async function submitChessChallenge(
+  params: { challengeId: string; userMove: string },
+  options?: Record<string, any>,
+): Promise<API.Result<{ gameInfo: API.GameInfo; roundResult: any }>> {
+  return request<API.Result<{ gameInfo: API.GameInfo; roundResult: any }>>(
+    '/v0/qixun/chess/challenge/submit',
+    {
+      method: 'POST',
+      data: params,
+      ...(options || {}),
+    },
+  );
+}
+
+export async function nextChessChallenge(
+  params: { challengeId: string },
+  options?: Record<string, any>,
+): Promise<API.Result<API.GameInfo>> {
+  return request<API.Result<API.GameInfo>>('/v0/qixun/chess/challenge/next', {
+    method: 'POST',
+    data: params,
+    ...(options || {}),
+  });
+}
+
 /**
  * 获取派对信息
  *

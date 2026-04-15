@@ -24,6 +24,8 @@ const corsOrigins = (process.env.CORS_ORIGIN || 'https://saiyuan.top')
   .filter(Boolean);
 
 const smsCodes = new Map();
+const chessEvalCache = new Map();
+const chessChallengeSessions = new Map();
 const defaultChallengeProvider = {
   userId: 0,
   userName: '棋寻',
@@ -64,6 +66,10 @@ function ok(data = null) {
 
 function fail(errorMessage, errorCode = 400) {
   return { success: false, errorCode, errorMessage, data: null };
+}
+
+function chessSessionKey(challengeId, userId) {
+  return `${challengeId}::${userId || 0}`;
 }
 
 function toUserProfile(row) {
@@ -179,48 +185,159 @@ function makeChessRound(puzzle, roundIndex) {
   };
 }
 
-async function makeChessChallengeGameInfo(challengeId, date) {
+function normalizeEvalScore(score) {
+  if (typeof score !== 'number' || Number.isNaN(score)) return null;
+  return score;
+}
+
+async function analyzeChessPuzzle(puzzle) {
+  const cacheKey = String(puzzle.id || puzzle.fen);
+  if (chessEvalCache.has(cacheKey)) {
+    return chessEvalCache.get(cacheKey);
+  }
+
+  const analysis = await analyzeFenLocal({
+    fen: puzzle.fen,
+    depth: 18,
+    multipv: 99,
+    timeoutMs: Number(process.env.SF_TIMEOUT_MS || 60000),
+  });
+
+  const entries = Object.entries(analysis.evals || {})
+    .map(([move, score]) => ({
+      move: String(move).trim(),
+      score: normalizeEvalScore(Number(score)),
+    }))
+    .filter((item) => item.move && item.score !== null)
+    .sort((a, b) => (b.score ?? -Infinity) - (a.score ?? -Infinity));
+
+  const result = {
+    bestMove: analysis.bestmove || entries[0]?.move || '',
+    bestScore: entries[0]?.score ?? 0,
+    evals: Object.fromEntries(entries.map((item) => [item.move, item.score])),
+    orderedMoves: entries,
+  };
+  chessEvalCache.set(cacheKey, result);
+  return result;
+}
+
+function buildChessRoundResult({ round, userMove, bestMove, moveScore, bestScore, totalScore }) {
+  const cpDiff = Math.max(0, Number(bestScore || 0) - Number(moveScore || 0));
+  const score = Math.round(5000 * Math.exp(-cpDiff / 200));
+  return {
+    round,
+    score,
+    distance: cpDiff,
+    user: defaultChallengeProvider,
+    guessPlace: userMove,
+    targetPlace: bestMove,
+    bestMove,
+    userMove,
+    cpDiff,
+    bestScore,
+    moveScore,
+    totalScore,
+  };
+}
+
+function cloneRoundResults(roundResults) {
+  return roundResults.map((item) => ({ ...item }));
+}
+
+async function makeChessGameInfoFromSession(session) {
+  const rounds = session.puzzles.map((puzzle, index) => makeChessRound(puzzle, index));
+  const currentPuzzle = session.puzzles[session.currentRound] || null;
+  const currentFen = currentPuzzle?.fen || null;
+  const isFinished =
+    session.currentRound >= session.puzzles.length ||
+    (session.submitted && session.currentRound === session.puzzles.length - 1);
+  const analysis =
+    !isFinished && currentPuzzle ? await analyzeChessPuzzle(currentPuzzle) : null;
+  const legalMoves = analysis?.orderedMoves?.map((item) => item.move) || [];
+
+  return {
+    id: session.challengeId,
+    status: isFinished ? 'finish' : 'ongoing',
+    health: 10000,
+    type: 'daily_challenge',
+    challengeId: session.challengeId,
+    currentFen,
+    fen: currentFen,
+    player: {
+      totalScore: session.totalScore,
+      roundResults: cloneRoundResults(session.roundResults),
+      guesses: [],
+      lastRoundResult: session.lastRoundResult ? { ...session.lastRoundResult } : null,
+      user: session.userProfile || defaultChallengeProvider,
+    },
+    rounds,
+    currentRound: isFinished ? Math.max(0, session.puzzles.length - 1) : session.currentRound,
+    roundNumber: session.puzzles.length || 5,
+    roundTimePeriod: 150,
+    roundTimeGuessPeriod: 150,
+    timerStartTime: session.roundStartedAt,
+    startTimerPeriod: 0,
+    mapsName: '每日挑战-国际象棋',
+    mapsId: null,
+    teams: null,
+    playerIds: session.userId ? [session.userId] : null,
+    requestUserId: session.userId || null,
+    host: defaultChallengeProvider,
+    puzzleIds: session.puzzleIds,
+    chess: {
+      canSubmit: !session.submitted,
+      canNext: !!session.submitted && !isFinished,
+      submittedMove: session.submittedMove || null,
+      legalMoves,
+      bestMove: analysis?.bestMove || null,
+    },
+  };
+}
+
+async function getOrCreateChessSession({ challengeId, date, user }) {
   let puzzles = await getDailyPuzzles(date);
   if (puzzles.length === 0) {
     await selectDailyPuzzles();
     puzzles = await getDailyPuzzles(date);
   }
-
-  const rounds = puzzles.map((puzzle, index) => makeChessRound(puzzle, index));
-  const currentRound = rounds.length > 0 ? 0 : null;
-  const currentFen = currentRound !== null ? rounds[currentRound].fen : null;
   const puzzleIds = await getDailyPuzzleIds(date);
+  const key = chessSessionKey(challengeId, user?.id);
+  const existing = chessChallengeSessions.get(key);
 
-  return {
-    id: challengeId,
-    status: currentFen ? 'ongoing' : 'ready',
-    health: 10000,
-    type: 'daily_challenge',
+  if (
+    existing &&
+    existing.date === date &&
+    JSON.stringify(existing.puzzleIds) === JSON.stringify(puzzleIds)
+  ) {
+    if (user) {
+      existing.userId = user.id;
+      existing.userProfile = toUserProfile(user);
+    }
+    return existing;
+  }
+
+  const session = {
     challengeId,
-    currentFen,
-    fen: currentFen,
-    player: {
-      totalScore: 0,
-      roundResults: [],
-      guesses: [],
-      lastRoundResult: null,
-      user: defaultChallengeProvider,
-    },
-    rounds,
-    currentRound,
-    roundNumber: rounds.length || 5,
-    roundTimePeriod: 150,
-    roundTimeGuessPeriod: 150,
-    timerStartTime: Date.now(),
-    startTimerPeriod: 0,
-    mapsName: '每日挑战-国际象棋',
-    mapsId: null,
-    teams: null,
-    playerIds: null,
-    requestUserId: null,
-    host: defaultChallengeProvider,
+    date,
+    userId: user?.id || 0,
+    userProfile: user ? toUserProfile(user) : defaultChallengeProvider,
     puzzleIds,
+    puzzles,
+    currentRound: 0,
+    totalScore: 0,
+    roundResults: [],
+    lastRoundResult: null,
+    submitted: false,
+    submittedMove: '',
+    roundStartedAt: Date.now(),
   };
+  chessChallengeSessions.set(key, session);
+  return session;
+}
+
+async function makeChessChallengeGameInfo(challengeId, date) {
+  const session = await getOrCreateChessSession({ challengeId, date, user: null });
+  return await makeChessGameInfoFromSession(session);
 }
 
 function makeReadyGameInfo(type) {
@@ -398,7 +515,13 @@ app.get('/v0/qixun/challenge/getGameInfo', async (req, res) => {
     if (challengeId) {
       const parsed = parseDailyChallengeId(challengeId);
       if (parsed?.type === 'chess') {
-        const gameInfo = await makeChessChallengeGameInfo(challengeId, parsed.date);
+        const sessionUser = await getSessionUser(req);
+        const session = await getOrCreateChessSession({
+          challengeId,
+          date: parsed.date,
+          user: sessionUser,
+        });
+        const gameInfo = await makeChessGameInfoFromSession(session);
         return res.json(ok(gameInfo));
       }
     }
@@ -447,6 +570,100 @@ app.get('/v0/qixun/challenge/start', async (req, res) => {
       challengeId: gameId,
     }),
   );
+});
+
+app.post('/v0/qixun/chess/challenge/submit', requireUser, async (req, res) => {
+  try {
+    const challengeId = String(req.body?.challengeId || req.query?.challengeId || '').trim();
+    const userMove = String(req.body?.userMove || req.query?.userMove || '').trim();
+    if (!challengeId) return res.json(fail('challengeId不能为空'));
+    if (!userMove) return res.json(fail('userMove不能为空'));
+
+    const parsed = parseDailyChallengeId(challengeId);
+    if (!parsed || parsed.type !== 'chess') return res.json(fail('不是国际象棋每日挑战'));
+
+    const session = await getOrCreateChessSession({
+      challengeId,
+      date: parsed.date,
+      user: req.user,
+    });
+
+    if (session.currentRound >= session.puzzles.length) {
+      return res.json(fail('本局已经完成'));
+    }
+    if (session.submitted) {
+      return res.json(fail('当前回合已提交，请先进入下一题'));
+    }
+
+    const currentPuzzle = session.puzzles[session.currentRound];
+    const analysis = await analyzeChessPuzzle(currentPuzzle);
+    const moveAnalysis = await analyzeFenLocal({
+      fen: currentPuzzle.fen,
+      depth: 18,
+      multipv: 1,
+      timeoutMs: Number(process.env.SF_TIMEOUT_MS || 60000),
+      searchMoves: [userMove],
+    });
+    const moveScore = moveAnalysis.evals[userMove];
+    if (moveScore === undefined) {
+      return res.json(fail('该走法无法评估，请确认是合法棋步'));
+    }
+
+    const roundResult = buildChessRoundResult({
+      round: session.currentRound + 1,
+      userMove,
+      bestMove: analysis.bestMove,
+      moveScore,
+      bestScore: analysis.bestScore,
+      totalScore: session.totalScore,
+    });
+
+    session.totalScore += roundResult.score;
+    roundResult.totalScore = session.totalScore;
+    session.roundResults.push(roundResult);
+    session.lastRoundResult = roundResult;
+    session.submitted = true;
+    session.submittedMove = userMove;
+
+    const gameInfo = await makeChessGameInfoFromSession(session);
+    return res.json(ok({ gameInfo, roundResult }));
+  } catch (err) {
+    return res.json(fail(`提交失败: ${err.message}`));
+  }
+});
+
+app.post('/v0/qixun/chess/challenge/next', requireUser, async (req, res) => {
+  try {
+    const challengeId = String(req.body?.challengeId || req.query?.challengeId || '').trim();
+    if (!challengeId) return res.json(fail('challengeId不能为空'));
+
+    const parsed = parseDailyChallengeId(challengeId);
+    if (!parsed || parsed.type !== 'chess') return res.json(fail('不是国际象棋每日挑战'));
+
+    const session = await getOrCreateChessSession({
+      challengeId,
+      date: parsed.date,
+      user: req.user,
+    });
+
+    if (!session.submitted) {
+      return res.json(fail('请先提交当前回合'));
+    }
+
+    if (session.currentRound < session.puzzles.length - 1) {
+      session.currentRound += 1;
+      session.submitted = false;
+      session.submittedMove = '';
+      session.roundStartedAt = Date.now();
+    } else {
+      session.currentRound = session.puzzles.length;
+    }
+
+    const gameInfo = await makeChessGameInfoFromSession(session);
+    return res.json(ok(gameInfo));
+  } catch (err) {
+    return res.json(fail(`进入下一题失败: ${err.message}`));
+  }
 });
 
 app.get('/v0/qixun/message/check', (_req, res) => res.json(ok(0)));

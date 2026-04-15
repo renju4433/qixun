@@ -11,7 +11,13 @@ function findExePath() {
   return null;
 }
 
-function analyzeFenLocal({ fen, depth = 18, timeoutMs = 999999, multipv = 99 }) {
+function analyzeFenLocal({
+  fen,
+  depth = 18,
+  timeoutMs = 999999,
+  multipv = 99,
+  searchMoves = [],
+}) {
   return new Promise((resolve, reject) => {
     const exePath = findExePath();
     if (!exePath) {
@@ -70,12 +76,15 @@ function analyzeFenLocal({ fen, depth = 18, timeoutMs = 999999, multipv = 99 }) 
       const msg = line.trim();
       if (!msg) return;
 
-      if (msg.startsWith('info ') && msg.includes(' cp ') && msg.includes(' pv ')) {
+      if (msg.startsWith('info ') && msg.includes(' pv ')) {
         const cpMatch = msg.match(/\bcp\s+(-?\d+)\b/);
+        const mateMatch = msg.match(/\bmate\s+(-?\d+)\b/);
         const pvMatch = msg.match(/\bpv\s+(\S+)/);
-        if (cpMatch && pvMatch) {
+        if (pvMatch && (cpMatch || mateMatch)) {
           const move = pvMatch[1];
-          const cp = Number(cpMatch[1]);
+          const cp = cpMatch
+            ? Number(cpMatch[1])
+            : Math.sign(Number(mateMatch[1])) * (100000 - Math.abs(Number(mateMatch[1])));
           cpByMove.set(move, cp);
         }
       }
@@ -119,7 +128,14 @@ function analyzeFenLocal({ fen, depth = 18, timeoutMs = 999999, multipv = 99 }) 
     send(`setoption name MultiPV value ${Math.max(1, Number(multipv || process.env.SF_MULTIPV || 2))}`);
     send('ucinewgame');
     send(`position fen ${fen}`);
-    send(`go depth ${Math.max(1, Number(depth || 18))}`);
+    const normalizedSearchMoves = Array.isArray(searchMoves)
+      ? searchMoves.map((move) => String(move || '').trim()).filter(Boolean)
+      : [];
+    send(
+      `go depth ${Math.max(1, Number(depth || 18))}${
+        normalizedSearchMoves.length ? ` searchmoves ${normalizedSearchMoves.join(' ')}` : ''
+      }`,
+    );
   });
 }
 
