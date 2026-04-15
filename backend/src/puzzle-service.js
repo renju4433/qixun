@@ -1,5 +1,24 @@
 const { pool } = require('../src/db');
 
+function normalizePuzzleIds(value) {
+  if (Array.isArray(value)) {
+    return value.map((id) => Number(id)).filter((id) => Number.isFinite(id));
+  }
+
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) {
+        return parsed.map((id) => Number(id)).filter((id) => Number.isFinite(id));
+      }
+    } catch (_) {
+      return [];
+    }
+  }
+
+  return [];
+}
+
 /**
  * 每日0点执行：从题库随机选5题
  */
@@ -58,7 +77,11 @@ async function getDailyPuzzles(date = null) {
     return [];
   }
 
-  const puzzleIds = JSON.parse(rows[0].puzzle_ids);
+  const puzzleIds = normalizePuzzleIds(rows[0].puzzle_ids);
+  if (puzzleIds.length === 0) {
+    console.warn(`${date} 的题目 ID 数据无效`);
+    return [];
+  }
   
   // 获取完整题目信息
   const [puzzles] = await pool.query(`
@@ -83,11 +106,7 @@ async function getDailyPuzzleIds(date = null) {
     return [];
   }
 
-  try {
-    return JSON.parse(rows[0].puzzle_ids);
-  } catch (_) {
-    return [];
-  }
+  return normalizePuzzleIds(rows[0].puzzle_ids);
 }
 
 /**

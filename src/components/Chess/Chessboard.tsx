@@ -15,6 +15,21 @@ declare global {
 
 const isFen = (text: string) => /^([pnbrqkPNBRQK1-8]+\/){7}[pnbrqkPNBRQK1-8]+ [wb] /.test(text);
 
+const CHESSBOARD_CSS_URLS = [
+  'https://cdn.jsdelivr.net/npm/chessboardjs@1.0.0/www/css/chessboard-1.0.0.min.css',
+  'https://unpkg.com/chessboardjs@1.0.0/www/css/chessboard-1.0.0.min.css',
+];
+
+const JQUERY_URLS = [
+  'https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js',
+  'https://unpkg.com/jquery@3.7.1/dist/jquery.min.js',
+];
+
+const CHESSBOARD_JS_URLS = [
+  'https://cdn.jsdelivr.net/npm/chessboardjs@1.0.0/www/js/chessboard-1.0.0.min.js',
+  'https://unpkg.com/chessboardjs@1.0.0/www/js/chessboard-1.0.0.min.js',
+];
+
 const ensureCss = (id: string, href: string) => {
   if (document.getElementById(id)) return;
   const link = document.createElement('link');
@@ -45,28 +60,35 @@ const ensureScript = (id: string, src: string) =>
     document.body.appendChild(script);
   });
 
+const loadFirstAvailableScript = async (idPrefix: string, urls: string[]) => {
+  let lastError: Error | null = null;
+  for (let i = 0; i < urls.length; i += 1) {
+    try {
+      await ensureScript(`${idPrefix}-${i}`, urls[i]);
+      return;
+    } catch (err: any) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+    }
+  }
+  throw lastError || new Error(`load failed: ${idPrefix}`);
+};
+
 const Chessboard: FC<ChessboardProps> = ({ fen }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const boardRef = useRef<any>(null);
   const [ready, setReady] = useState(false);
+  const [error, setError] = useState<string>('');
   const validFen = useMemo(() => (fen && isFen(fen) ? fen : 'start'), [fen]);
 
   useEffect(() => {
     let cancelled = false;
     const init = async () => {
       try {
-        ensureCss(
-          'chessboardjs-css',
-          'https://cdn.jsdelivr.net/npm/chessboardjs@1.0.0/www/css/chessboard-1.0.0.min.css',
+        CHESSBOARD_CSS_URLS.forEach((url, index) =>
+          ensureCss(`chessboardjs-css-${index}`, url),
         );
-        await ensureScript(
-          'jquery-js',
-          'https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js',
-        );
-        await ensureScript(
-          'chessboardjs-js',
-          'https://cdn.jsdelivr.net/npm/chessboardjs@1.0.0/www/js/chessboard-1.0.0.min.js',
-        );
+        await loadFirstAvailableScript('jquery-js', JQUERY_URLS);
+        await loadFirstAvailableScript('chessboardjs-js', CHESSBOARD_JS_URLS);
 
         if (cancelled || !containerRef.current || !window.Chessboard) return;
         boardRef.current = window.Chessboard(containerRef.current, {
@@ -74,8 +96,10 @@ const Chessboard: FC<ChessboardProps> = ({ fen }) => {
           draggable: false,
           showNotation: true,
         });
+        setError('');
         setReady(true);
-      } catch (_) {
+      } catch (err: any) {
+        setError(err?.message || '棋盘脚本加载失败');
         setReady(false);
       }
     };
@@ -99,6 +123,7 @@ const Chessboard: FC<ChessboardProps> = ({ fen }) => {
     <div className={styles.wrapper}>
       <div ref={containerRef} className={styles.board} />
       {!ready && <div className={styles.loading}>棋盘加载中...</div>}
+      {error && <div className={styles.error}>{error}</div>}
       <div className={styles.info}>{fen || '等待题目加载...'}</div>
     </div>
   );

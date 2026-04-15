@@ -452,6 +452,7 @@ app.get('/v0/qixun/challenge/start', async (req, res) => {
 app.get('/v0/qixun/message/check', (_req, res) => res.json(ok(0)));
 app.get('/v0/qixun/vip/check', (_req, res) => res.json(ok(null)));
 app.get('/v0/qixun/vip/checkIsVip', (_req, res) => res.json(ok(false)));
+app.get('/v0/qixun/solo/listEmojis', (_req, res) => res.json(ok([])));
 
 // ========== 国际象棋题库接口 ==========
 
