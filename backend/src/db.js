@@ -21,11 +21,16 @@ async function initDb() {
       \`desc\` VARCHAR(255) NULL,
       province VARCHAR(32) NULL,
       rating INT NOT NULL DEFAULT 1200,
+      fast_rating INT NOT NULL DEFAULT 1200,
+      slow_rating INT NOT NULL DEFAULT 1200,
       puzzle_rating INT NOT NULL DEFAULT 1200,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
   `);
+
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS fast_rating INT NOT NULL DEFAULT 1200`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS slow_rating INT NOT NULL DEFAULT 1200`);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS user_sessions (

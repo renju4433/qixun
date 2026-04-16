@@ -3800,10 +3800,12 @@ export async function getTips(
 }
 
 export async function joinGomokuMatch(
+  data?: { matchMode?: 'fast' | 'slow' },
   options?: Record<string, any>,
 ): Promise<API.Result<any>> {
   return request<API.Result<any>>('/v0/qixun/gomoku/match/join', {
     method: 'POST',
+    data,
     ...(options || {}),
   });
 }

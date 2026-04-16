@@ -8,7 +8,7 @@ import {
   playGomokuMove,
 } from '@/services/api';
 import { history, useModel } from '@@/exports';
-import { Alert, Button, Card, Flex, List, Spin, Tag, message } from 'antd';
+import { Alert, Button, Card, Flex, List, Spin, Statistic, Tag, message } from 'antd';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import styles from './style.less';
 
@@ -37,9 +37,15 @@ type GomokuAnalysisMove = {
 type GomokuGame = {
   id: string;
   status: 'queued' | 'ongoing' | 'finished';
+  matchMode: 'fast' | 'slow';
+  ruleText: string;
   boardSize: number;
   currentTurn: number;
   winnerColor: number | null;
+  baseTimeMs: number;
+  incrementMs: number;
+  blackTimeMs: number;
+  whiteTimeMs: number;
   blackUser: GomokuPlayer | null;
   whiteUser: GomokuPlayer | null;
   viewerColor: number | null;
@@ -68,6 +74,7 @@ const AllMatch = () => {
   const [loading, setLoading] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
+  const [matchMode, setMatchMode] = useState<'fast' | 'slow'>('fast');
   const pollingRef = useRef<number | null>(null);
 
   const statusText = useMemo(() => {
@@ -112,7 +119,7 @@ const AllMatch = () => {
     }
     setLoading(true);
     try {
-      const res = await joinGomokuMatch();
+      const res = await joinGomokuMatch({ matchMode });
       if (res.success && res.data) {
         setGame(res.data);
       } else {
@@ -168,6 +175,31 @@ const AllMatch = () => {
     }
   };
 
+  const renderPlayerName = (player: GomokuPlayer | null, color: 1 | 2) => {
+    if (!player) {
+      return <div>等待匹配中</div>;
+    }
+
+    const isCurrentTurn = game?.status === 'ongoing' && game.currentTurn === color;
+    const isMe = user?.userId === player.userId;
+
+    return (
+      <div className={styles.playerNameRow}>
+        <span className={isCurrentTurn ? styles.activePlayerName : styles.playerName}>
+          {player.userName}
+        </span>
+        {isMe && <Tag color="blue">我</Tag>}
+      </div>
+    );
+  };
+
+  const formatClock = (timeMs?: number) => {
+    const safe = Math.max(0, Math.floor((timeMs || 0) / 1000));
+    const minutes = Math.floor(safe / 60);
+    const seconds = safe % 60;
+    return `${minutes}:${String(seconds).padStart(2, '0')}`;
+  };
+
   return (
     <div className={styles.page}>
       <div style={{ marginTop: 10 }}>
@@ -181,6 +213,25 @@ const AllMatch = () => {
         {!game && (
           <Card className={styles.panel}>
             <Flex vertical gap={16} align="center">
+              <div className={styles.modeSwitch}>
+                <Button
+                  type={matchMode === 'fast' ? 'primary' : 'default'}
+                  onClick={() => setMatchMode('fast')}
+                >
+                  快棋场
+                </Button>
+                <Button
+                  type={matchMode === 'slow' ? 'primary' : 'default'}
+                  onClick={() => setMatchMode('slow')}
+                >
+                  慢棋场
+                </Button>
+              </div>
+              <div className={styles.modeHint}>
+                {matchMode === 'fast'
+                  ? '塔拉山口-10规则，基础用时 3 分钟，每步加 2 秒'
+                  : '塔拉山口-10规则，基础用时 15 分钟，每步加 5 秒'}
+              </div>
               <Button type="primary" size="large" loading={loading} onClick={startMatch}>
                 开始匹配
               </Button>
@@ -216,11 +267,13 @@ const AllMatch = () => {
                   <Flex className={styles.players} gap={12}>
                     <Card size="small" className={styles.playerCard}>
                       <div className={styles.playerTitle}>黑方</div>
-                      <div>{game.blackUser?.userName || '等待匹配中'}</div>
+                      {renderPlayerName(game.blackUser, 1)}
+                      <div className={styles.playerClock}>{formatClock(game.blackTimeMs)}</div>
                     </Card>
                     <Card size="small" className={styles.playerCard}>
                       <div className={styles.playerTitle}>白方</div>
-                      <div>{game.whiteUser?.userName || '等待匹配中'}</div>
+                      {renderPlayerName(game.whiteUser, 2)}
+                      <div className={styles.playerClock}>{formatClock(game.whiteTimeMs)}</div>
                     </Card>
                   </Flex>
 

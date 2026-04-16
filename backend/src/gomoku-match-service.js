@@ -4,6 +4,26 @@ const { RapfiLocalEngine } = require('./rapfi-local');
 const BOARD_SIZE = 15;
 const ANALYZE_MAX_DEPTH = Number(process.env.GOMOKU_ANALYZE_DEPTH || 10);
 const ANALYZE_THREADS = Number(process.env.GOMOKU_ANALYZE_THREADS || 1);
+const MATCH_MODES = {
+  fast: {
+    key: 'fast',
+    name: '快棋场',
+    baseTimeMs: 3 * 60 * 1000,
+    incrementMs: 2 * 1000,
+    ruleText: '塔拉山口-10',
+  },
+  slow: {
+    key: 'slow',
+    name: '慢棋场',
+    baseTimeMs: 15 * 60 * 1000,
+    incrementMs: 5 * 1000,
+    ruleText: '塔拉山口-10',
+  },
+};
+
+function getMatchModeConfig(mode) {
+  return MATCH_MODES[mode] || MATCH_MODES.fast;
+}
 
 function createEmptyBoard() {
   return Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(0));
@@ -71,13 +91,67 @@ function profileFromRow(row) {
   };
 }
 
+function getRemainingTimeMs(game, now = Date.now()) {
+  let blackTimeMs = game.black_time_ms ?? 0;
+  let whiteTimeMs = game.white_time_ms ?? 0;
+
+  if (game.status === 'ongoing' && game.turn_started_at) {
+    const elapsed = Math.max(0, now - new Date(game.turn_started_at).getTime());
+    if (game.current_turn === 1) {
+      blackTimeMs = Math.max(0, blackTimeMs - elapsed);
+    } else if (game.current_turn === 2) {
+      whiteTimeMs = Math.max(0, whiteTimeMs - elapsed);
+    }
+  }
+
+  return { blackTimeMs, whiteTimeMs };
+}
+
+async function finalizeTimeoutIfNeeded(conn, game) {
+  if (game.status !== 'ongoing' || !game.turn_started_at) {
+    return game;
+  }
+
+  const { blackTimeMs, whiteTimeMs } = getRemainingTimeMs(game);
+  let winnerColor = null;
+  if (game.current_turn === 1 && blackTimeMs <= 0) {
+    winnerColor = 2;
+  } else if (game.current_turn === 2 && whiteTimeMs <= 0) {
+    winnerColor = 1;
+  }
+
+  if (winnerColor === null) {
+    return game;
+  }
+
+  await conn.query(
+    `UPDATE gomoku_games
+     SET status = 'finished',
+         winner_color = ?,
+         black_time_ms = ?,
+         white_time_ms = ?,
+         analysis_json = NULL
+     WHERE id = ?`,
+    [winnerColor, blackTimeMs, whiteTimeMs, game.id],
+  );
+
+  return {
+    ...game,
+    status: 'finished',
+    winner_color: winnerColor,
+    black_time_ms: blackTimeMs,
+    white_time_ms: whiteTimeMs,
+  };
+}
+
 async function loadGameWithMoves(conn, gameId) {
   const [gameRows] = await conn.query(
     'SELECT * FROM gomoku_games WHERE id = ? LIMIT 1',
     [gameId],
   );
-  const game = gameRows[0];
+  let game = gameRows[0];
   if (!game) return null;
+  game = await finalizeTimeoutIfNeeded(conn, game);
 
   const [moveRows] = await conn.query(
     'SELECT move_index, x, y, color, created_at FROM gomoku_moves WHERE game_id = ? ORDER BY move_index ASC',
@@ -112,6 +186,7 @@ async function loadGameWithMoves(conn, gameId) {
 
 function formatGameState(payload, viewerUserId) {
   const { game, moves, blackUser, whiteUser } = payload;
+  const { blackTimeMs, whiteTimeMs } = getRemainingTimeMs(game);
   const viewerColor =
     game.black_user_id === viewerUserId
       ? 1
@@ -122,9 +197,15 @@ function formatGameState(payload, viewerUserId) {
   return {
     id: game.id,
     status: game.status,
+    matchMode: game.match_mode,
+    ruleText: game.rule_text,
     boardSize: game.board_size,
     currentTurn: game.current_turn,
     winnerColor: game.winner_color,
+    baseTimeMs: game.base_time_ms,
+    incrementMs: game.increment_ms,
+    blackTimeMs,
+    whiteTimeMs,
     blackUser,
     whiteUser,
     viewerColor,
@@ -143,10 +224,17 @@ async function ensureMatchTables(pool) {
     CREATE TABLE IF NOT EXISTS gomoku_games (
       id VARCHAR(64) PRIMARY KEY,
       status VARCHAR(16) NOT NULL,
+      match_mode VARCHAR(16) NOT NULL DEFAULT 'fast',
+      rule_text VARCHAR(64) NOT NULL DEFAULT '塔拉山口-10',
       board_size INT NOT NULL DEFAULT 15,
       black_user_id BIGINT NOT NULL,
       white_user_id BIGINT NULL,
       current_turn TINYINT NOT NULL DEFAULT 1,
+      base_time_ms INT NOT NULL DEFAULT 180000,
+      increment_ms INT NOT NULL DEFAULT 2000,
+      black_time_ms INT NOT NULL DEFAULT 180000,
+      white_time_ms INT NULL,
+      turn_started_at DATETIME NULL,
       winner_color TINYINT NULL,
       win_line_json JSON NULL,
       analysis_json JSON NULL,
@@ -157,6 +245,14 @@ async function ensureMatchTables(pool) {
       INDEX idx_white_user(white_user_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
   `);
+
+  await pool.query(`ALTER TABLE gomoku_games ADD COLUMN IF NOT EXISTS match_mode VARCHAR(16) NOT NULL DEFAULT 'fast'`);
+  await pool.query(`ALTER TABLE gomoku_games ADD COLUMN IF NOT EXISTS rule_text VARCHAR(64) NOT NULL DEFAULT '塔拉山口-10'`);
+  await pool.query(`ALTER TABLE gomoku_games ADD COLUMN IF NOT EXISTS base_time_ms INT NOT NULL DEFAULT 180000`);
+  await pool.query(`ALTER TABLE gomoku_games ADD COLUMN IF NOT EXISTS increment_ms INT NOT NULL DEFAULT 2000`);
+  await pool.query(`ALTER TABLE gomoku_games ADD COLUMN IF NOT EXISTS black_time_ms INT NOT NULL DEFAULT 180000`);
+  await pool.query(`ALTER TABLE gomoku_games ADD COLUMN IF NOT EXISTS white_time_ms INT NULL`);
+  await pool.query(`ALTER TABLE gomoku_games ADD COLUMN IF NOT EXISTS turn_started_at DATETIME NULL`);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS gomoku_moves (
@@ -174,7 +270,8 @@ async function ensureMatchTables(pool) {
   `);
 }
 
-async function joinMatch(pool, userId) {
+async function joinMatch(pool, userId, matchMode) {
+  const mode = getMatchModeConfig(matchMode);
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
@@ -183,11 +280,12 @@ async function joinMatch(pool, userId) {
       `SELECT id
        FROM gomoku_games
        WHERE status IN ('queued', 'ongoing')
+         AND match_mode = ?
          AND (black_user_id = ? OR white_user_id = ?)
        ORDER BY created_at DESC
        LIMIT 1
        FOR UPDATE`,
-      [userId, userId],
+      [mode.key, userId, userId],
     );
 
     let gameId = existingRows[0]?.id;
@@ -197,19 +295,24 @@ async function joinMatch(pool, userId) {
         `SELECT id
          FROM gomoku_games
          WHERE status = 'queued'
+           AND match_mode = ?
            AND white_user_id IS NULL
            AND black_user_id <> ?
          ORDER BY created_at ASC
          LIMIT 1
          FOR UPDATE`,
-        [userId],
+        [mode.key, userId],
       );
 
       if (queueRows[0]) {
         gameId = queueRows[0].id;
         await conn.query(
           `UPDATE gomoku_games
-           SET white_user_id = ?, status = 'ongoing', current_turn = 1
+           SET white_user_id = ?,
+               status = 'ongoing',
+               current_turn = 1,
+               white_time_ms = base_time_ms,
+               turn_started_at = NOW()
            WHERE id = ?`,
           [userId, gameId],
         );
@@ -217,9 +320,20 @@ async function joinMatch(pool, userId) {
         gameId = crypto.randomUUID();
         await conn.query(
           `INSERT INTO gomoku_games(
-            id, status, board_size, black_user_id, current_turn
-          ) VALUES (?, 'queued', ?, ?, 1)`,
-          [gameId, BOARD_SIZE, userId],
+            id, status, match_mode, rule_text, board_size, black_user_id, current_turn,
+            base_time_ms, increment_ms, black_time_ms, white_time_ms
+          ) VALUES (?, 'queued', ?, ?, ?, ?, 1, ?, ?, ?, ?)`,
+          [
+            gameId,
+            mode.key,
+            mode.ruleText,
+            BOARD_SIZE,
+            userId,
+            mode.baseTimeMs,
+            mode.incrementMs,
+            mode.baseTimeMs,
+            mode.baseTimeMs,
+          ],
         );
       }
     }
@@ -277,6 +391,7 @@ async function playMove(pool, gameId, userId, x, y) {
     if (!payload) throw new Error('对局不存在');
 
     const { game, moves } = payload;
+    const liveTimes = getRemainingTimeMs(game);
     const playerColor =
       game.black_user_id === userId
         ? 1
@@ -287,6 +402,9 @@ async function playMove(pool, gameId, userId, x, y) {
     if (playerColor === null) throw new Error('你不是该对局玩家');
     if (game.status !== 'ongoing') throw new Error('当前对局未进行中');
     if (game.current_turn !== playerColor) throw new Error('还没轮到你');
+    if ((playerColor === 1 ? liveTimes.blackTimeMs : liveTimes.whiteTimeMs) <= 0) {
+      throw new Error('已超时，无法继续落子');
+    }
     if (moves.some((move) => move.x === x && move.y === y)) {
       throw new Error('该位置已有棋子');
     }
@@ -308,9 +426,11 @@ async function playMove(pool, gameId, userId, x, y) {
          SET status = 'finished',
              winner_color = ?,
              win_line_json = ?,
+             black_time_ms = ?,
+             white_time_ms = ?,
              analysis_json = NULL
          WHERE id = ?`,
-        [winner.winnerColor, JSON.stringify(winner.winLine), gameId],
+        [winner.winnerColor, JSON.stringify(winner.winLine), liveTimes.blackTimeMs, liveTimes.whiteTimeMs, gameId],
       );
     } else if (isDraw) {
       await conn.query(
@@ -318,16 +438,26 @@ async function playMove(pool, gameId, userId, x, y) {
          SET status = 'finished',
              winner_color = 0,
              win_line_json = NULL,
+             black_time_ms = ?,
+             white_time_ms = ?,
              analysis_json = NULL
          WHERE id = ?`,
-        [gameId],
+        [liveTimes.blackTimeMs, liveTimes.whiteTimeMs, gameId],
       );
     } else {
+      const nextBlackTimeMs =
+        playerColor === 1 ? liveTimes.blackTimeMs + game.increment_ms : liveTimes.blackTimeMs;
+      const nextWhiteTimeMs =
+        playerColor === 2 ? liveTimes.whiteTimeMs + game.increment_ms : liveTimes.whiteTimeMs;
       await conn.query(
         `UPDATE gomoku_games
-         SET current_turn = ?, analysis_json = NULL
+         SET current_turn = ?,
+             black_time_ms = ?,
+             white_time_ms = ?,
+             turn_started_at = NOW(),
+             analysis_json = NULL
          WHERE id = ?`,
-        [playerColor === 1 ? 2 : 1, gameId],
+        [playerColor === 1 ? 2 : 1, nextBlackTimeMs, nextWhiteTimeMs, gameId],
       );
     }
 
@@ -430,11 +560,63 @@ async function analyzeFinishedGame(pool, gameId, viewerUserId) {
   }
 }
 
+async function getUserMatchStats(pool, userId) {
+  const [rows] = await pool.query(
+    `SELECT
+        match_mode,
+        COUNT(*) AS gameCount,
+        SUM(CASE WHEN winner_color = 0 THEN 1 ELSE 0 END) AS drawCount,
+        SUM(CASE
+          WHEN (winner_color = 1 AND black_user_id = ?)
+            OR (winner_color = 2 AND white_user_id = ?)
+          THEN 1 ELSE 0 END) AS winCount,
+        SUM(CASE
+          WHEN winner_color IN (1, 2)
+           AND NOT ((winner_color = 1 AND black_user_id = ?)
+             OR (winner_color = 2 AND white_user_id = ?))
+          THEN 1 ELSE 0 END) AS loseCount
+     FROM gomoku_games
+     WHERE status = 'finished'
+       AND (black_user_id = ? OR white_user_id = ?)
+     GROUP BY match_mode`,
+    [userId, userId, userId, userId, userId, userId],
+  );
+
+  const [userRows] = await pool.query(
+    'SELECT fast_rating, slow_rating FROM users WHERE id = ? LIMIT 1',
+    [userId],
+  );
+  const fastRating = userRows[0]?.fast_rating ?? 1200;
+  const slowRating = userRows[0]?.slow_rating ?? 1200;
+
+  const result = {
+    fast: { rating: fastRating, gameCount: 0, winCount: 0, drawCount: 0, loseCount: 0, scoreRate: null },
+    slow: { rating: slowRating, gameCount: 0, winCount: 0, drawCount: 0, loseCount: 0, scoreRate: null },
+  };
+
+  for (const row of rows) {
+    const target = result[row.match_mode];
+    if (!target) continue;
+    target.gameCount = Number(row.gameCount || 0);
+    target.winCount = Number(row.winCount || 0);
+    target.drawCount = Number(row.drawCount || 0);
+    target.loseCount = Number(row.loseCount || 0);
+    target.scoreRate =
+      target.gameCount > 0
+        ? Number((((target.winCount + target.drawCount * 0.5) / target.gameCount) * 100).toFixed(2))
+        : null;
+  }
+
+  return result;
+}
+
 module.exports = {
+  getMatchModeConfig,
   ensureMatchTables,
   joinMatch,
   cancelQueuedMatch,
   getGameState,
   playMove,
   analyzeFinishedGame,
+  getUserMatchStats,
 };

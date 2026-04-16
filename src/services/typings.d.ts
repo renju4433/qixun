@@ -262,8 +262,17 @@ declare namespace API {
    */
   type PointProfile = {
     userAO: UserProfile;
-    chinaRank: TypeRank;
-    worldRank: TypeRank;
+    fastMatch: MatchStats;
+    slowMatch: MatchStats;
+  };
+
+  type MatchStats = {
+    rating: number;
+    gameCount: number;
+    winCount: number;
+    drawCount: number;
+    loseCount: number;
+    scoreRate: number | null;
   };
 
   type TypeRank = {

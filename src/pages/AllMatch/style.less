@@ -41,6 +41,15 @@
   gap: 20px;
 }
 
+.left {
+  align-items: center;
+}
+
+.left .panel {
+  width: 100%;
+  max-width: 820px;
+}
+
 .panel {
   background: #395f8bdd;
   border: none;
@@ -89,6 +98,45 @@
   font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.playerNameRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.playerName {
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.activePlayerName {
+  color: #ff4d4f;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.playerClock {
+  margin-top: 8px;
+  color: #fff;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.modeSwitch {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.modeHint {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 14px;
+  text-align: center;
 }
 
 .summary {

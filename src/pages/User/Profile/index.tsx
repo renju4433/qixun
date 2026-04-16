@@ -17,6 +17,13 @@ const renderValue = (value: number | null | undefined) => {
   return value;
 };
 
+const renderStatValue = (value: number | null | undefined, suffix = '') => {
+  if (value === null || value === undefined) {
+    return '-';
+  }
+  return suffix ? `${value}${suffix}` : value;
+};
+
 const ProfilePage = () => {
   const { id } = useParams();
   const userId = Number(id);
@@ -74,23 +81,18 @@ const ProfilePage = () => {
     };
   }, [userId]);
 
-  const renderScoreRate = (rank?: API.TypeRank) => {
-    const total = rank?.soloTimes || 0;
-    const win = rank?.soloWin || 0;
-    const lose = rank?.soloLose || 0;
-    const draw = Math.max(0, total - win - lose);
-    if (!total) {
-      return '-';
-    }
-    return `${(((win + draw * 0.5) / total) * 100).toFixed(2)}%`;
-  };
-
-  const renderDrawCount = (rank?: API.TypeRank) => {
-    const total = rank?.soloTimes || 0;
-    const win = rank?.soloWin || 0;
-    const lose = rank?.soloLose || 0;
-    return Math.max(0, total - win - lose);
-  };
+  const renderStatsCard = (title: string, stats?: API.MatchStats) => (
+    <Card className={styles.panel} title={title}>
+      <div className={styles.rankGrid}>
+        <Statistic title="积分" value={renderValue(stats?.rating)} />
+        <Statistic title="得分率" value={renderStatValue(stats?.scoreRate, '%')} />
+        <Statistic title="对局数" value={renderStatValue(stats?.gameCount)} />
+        <Statistic title="胜" value={renderStatValue(stats?.winCount)} />
+        <Statistic title="平" value={renderStatValue(stats?.drawCount)} />
+        <Statistic title="负" value={renderStatValue(stats?.loseCount)} />
+      </div>
+    </Card>
+  );
 
   return (
     <div className={styles.page}>
@@ -124,23 +126,11 @@ const ProfilePage = () => {
 
             {pointProfile && (
               <Row gutter={[16, 16]} className={styles.section}>
-                <Col xs={24}>
-                  <Card className={styles.panel} title="对局数据">
-                    <div className={styles.rankGrid}>
-                      <Statistic title="积分" value={renderValue(pointProfile.worldRank?.rating)} />
-                      <Statistic
-                        title="得分率"
-                        value={renderScoreRate(pointProfile.worldRank)}
-                      />
-                      <Statistic
-                        title="对局数"
-                        value={renderValue(pointProfile.worldRank?.soloTimes)}
-                      />
-                      <Statistic title="胜" value={renderValue(pointProfile.worldRank?.soloWin)} />
-                      <Statistic title="平" value={renderDrawCount(pointProfile.worldRank)} />
-                      <Statistic title="负" value={renderValue(pointProfile.worldRank?.soloLose)} />
-                    </div>
-                  </Card>
+                <Col xs={24} lg={12}>
+                  {renderStatsCard('慢棋场', pointProfile.slowMatch)}
+                </Col>
+                <Col xs={24} lg={12}>
+                  {renderStatsCard('快棋场', pointProfile.fastMatch)}
                 </Col>
               </Row>
             )}

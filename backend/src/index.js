@@ -7,12 +7,14 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const { pool, initDb } = require('./db');
 const {
+  getMatchModeConfig,
   ensureMatchTables,
   joinMatch,
   cancelQueuedMatch,
   getGameState,
   playMove,
   analyzeFinishedGame,
+  getUserMatchStats,
 } = require('./gomoku-match-service');
 
 const app = express();
@@ -62,6 +64,8 @@ function toUserProfile(row) {
     focus: 0,
     desc: row.desc || null,
     rating: row.rating ?? 1200,
+    fastRating: row.fast_rating ?? 1200,
+    slowRating: row.slow_rating ?? 1200,
     puzzleRating: row.puzzle_rating ?? 1200,
     province: row.province || null,
     organization: null,
@@ -244,12 +248,13 @@ app.get('/v0/qixun/getProfile', async (req, res) => {
   if (!userId) return res.json(fail('userId不能为空'));
   const [rows] = await pool.query('SELECT * FROM users WHERE id = ? LIMIT 1', [userId]);
   if (!rows[0]) return res.json(fail('用户不存在'));
+  const matchStats = await getUserMatchStats(pool, userId);
 
   return res.json(
     ok({
       userAO: toUserProfile(rows[0]),
-      chinaRank: toTypeRank(rows[0]),
-      worldRank: toTypeRank(rows[0]),
+      fastMatch: matchStats.fast,
+      slowMatch: matchStats.slow,
     }),
   );
 });
@@ -286,7 +291,8 @@ app.get('/v0/qixun/activity/list', (_req, res) => {
 
 app.post('/v0/qixun/gomoku/match/join', requireUser, async (req, res) => {
   try {
-    const game = await joinMatch(pool, req.user.id);
+    const matchMode = readParam(req, 'matchMode') || 'fast';
+    const game = await joinMatch(pool, req.user.id, matchMode);
     return res.json(ok(game));
   } catch (err) {
     return res.json(fail(`开始匹配失败: ${err.message}`));
