@@ -119,10 +119,11 @@ async function requireUser(req, res, next) {
 }
 
 function setAuthCookie(res, token) {
+  const isProduction = process.env.NODE_ENV === 'production';
   res.cookie('qixun_sid', token, {
     httpOnly: true,
-    secure: true,
-    sameSite: 'none',
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
     signed: true,
     maxAge: 1000 * 60 * 60 * 24 * 30,
     path: '/',
@@ -212,7 +213,12 @@ app.all('/logout', async (req, res) => {
   try {
     const token = req.signedCookies.qixun_sid || req.cookies.qixun_sid;
     if (token) await pool.query('DELETE FROM user_sessions WHERE token = ?', [token]);
-    res.clearCookie('qixun_sid', { path: '/' });
+    const isProduction = process.env.NODE_ENV === 'production';
+    res.clearCookie('qixun_sid', {
+      path: '/',
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
+    });
     return res.json(ok(null));
   } catch (err) {
     return res.json(fail(`退出失败: ${err.message}`));

@@ -26,13 +26,9 @@ const PADDING = 24;
 const SIZE = PADDING * 2 + CELL * 14;
 const STAR_POINTS = [
   [3, 3],
-  [3, 7],
   [3, 11],
-  [7, 3],
   [7, 7],
-  [7, 11],
   [11, 3],
-  [11, 7],
   [11, 11],
 ];
 
@@ -126,8 +122,8 @@ const GomokuBoard = ({ moves, canPlay, onPlay, winLine }: GomokuBoardProps) => {
                       ? styles.blackWin
                       : styles.blackStone
                     : isWin
-                    ? styles.whiteWin
-                    : styles.whiteStone
+                      ? styles.whiteWin
+                      : styles.whiteStone
                 }
               />
               {isLast && (

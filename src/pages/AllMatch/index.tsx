@@ -8,7 +8,7 @@ import {
   playGomokuMove,
 } from '@/services/api';
 import { history, useModel } from '@@/exports';
-import { Alert, Button, Card, Flex, List, Spin, Statistic, Tag, message } from 'antd';
+import { Alert, Button, Card, Flex, List, Spin, Tag, message } from 'antd';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import styles from './style.less';
 
@@ -235,20 +235,6 @@ const AllMatch = () => {
             </div>
 
             <div className={styles.right}>
-              <Card className={styles.panel}>
-                <Flex vertical gap={12} className={styles.statsBlock}>
-                  <Statistic title="总手数" value={game.moves.length} />
-                  <Statistic
-                    title="你的颜色"
-                    value={game.viewerColor ? COLOR_TEXT[game.viewerColor] : '观战'}
-                  />
-                  <Statistic
-                    title="当前轮次"
-                    value={COLOR_TEXT[game.currentTurn] || '-'}
-                  />
-                </Flex>
-              </Card>
-
               {game.analysis && (
                 <Card className={styles.panel} title="赛后复盘">
                   <Flex gap={12} className={styles.summary}>
