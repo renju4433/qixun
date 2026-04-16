@@ -15,7 +15,7 @@ export default {
     // localhost:8000/api/** -> https://preview.pro.ant.design/api/**
     '/api': {
       // 本地开发默认代理到本地后端
-      target: 'https://saiyuan.top',
+      target: 'https://127.0.0.1:3002',
       // 配置了这个可以从 http 代理到 https
       // 依赖 origin 的功能可能需要这个，比如 cookie
       changeOrigin: true,
@@ -23,7 +23,7 @@ export default {
 
     '/ws': {
       // 要代理的地址
-      target: 'ws://saiyuan.top',
+      target: 'ws://127.0.0.1:3002',
       // 配置了这个可以从 http 代理到 https
       // 依赖 origin 的功能可能需要这个，比如 cookie
       changeOrigin: true,
