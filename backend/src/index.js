@@ -6,14 +6,14 @@ const cookieParser = require('cookie-parser');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const { pool, initDb } = require('./db');
-const { analyzeFenLocal, findExePath } = require('./stockfish-local');
 const {
-  selectDailyPuzzles,
-  getDailyPuzzles,
-  getDailyPuzzleIds,
-  checkPuzzleAnswer,
-  scheduleDaily,
-} = require('./puzzle-service');
+  ensureMatchTables,
+  joinMatch,
+  cancelQueuedMatch,
+  getGameState,
+  playMove,
+  analyzeFinishedGame,
+} = require('./gomoku-match-service');
 
 const app = express();
 const port = Number(process.env.PORT || 3002);
@@ -24,22 +24,6 @@ const corsOrigins = (process.env.CORS_ORIGIN || 'https://saiyuan.top')
   .filter(Boolean);
 
 const smsCodes = new Map();
-const chessEvalCache = new Map();
-const chessChallengeSessions = new Map();
-const defaultChallengeProvider = {
-  userId: 0,
-  userName: '棋寻',
-  icon: '',
-  ups: 0,
-  followers: 0,
-  focus: 0,
-  desc: null,
-  rating: 1200,
-  puzzleRating: 1200,
-  province: null,
-  organization: null,
-  avatarFrame: null,
-};
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -68,10 +52,6 @@ function fail(errorMessage, errorCode = 400) {
   return { success: false, errorCode, errorMessage, data: null };
 }
 
-function chessSessionKey(challengeId, userId) {
-  return `${challengeId}::${userId || 0}`;
-}
-
 function toUserProfile(row) {
   return {
     userId: row.id,
@@ -86,6 +66,25 @@ function toUserProfile(row) {
     province: row.province || null,
     organization: null,
     avatarFrame: null,
+  };
+}
+
+function toTypeRank(row) {
+  const rating = row.rating ?? 1200;
+  return {
+    rating,
+    maxRating: rating,
+    rank: 1,
+    lastRanking: null,
+    maxRanking: 1,
+    gameTimes: 0,
+    winningStreak: 0,
+    loseStreak: 0,
+    longestLoseStreak: 0,
+    longestWinningStreak: 0,
+    soloTimes: 0,
+    soloWin: 0,
+    soloLose: 0,
   };
 }
 
@@ -138,241 +137,6 @@ function readParam(req, ...keys) {
     }
   }
   return '';
-}
-
-function getTodayChallengeId(type) {
-  const day = new Date().toISOString().slice(0, 10);
-  return `daily-${day}-${type}`;
-}
-
-function parseDailyChallengeId(challengeId) {
-  const text = String(challengeId || '').trim();
-  const match = text.match(/^daily-(\d{4}-\d{2}-\d{2})-([a-z_]+)$/);
-  if (!match) return null;
-  return {
-    date: match[1],
-    type: match[2],
-  };
-}
-
-function makeChessRound(puzzle, roundIndex) {
-  const now = Date.now();
-  return {
-    round: roundIndex + 1,
-    contentType: 'panorama',
-    content: puzzle.fen,
-    fen: puzzle.fen,
-    heading: 0,
-    contentSpeedUp: null,
-    lat: 0,
-    lng: 0,
-    startTime: now,
-    timerStartTime: now,
-    timerGuessStartTime: now,
-    endTime: null,
-    contents: null,
-    isDamageMultiple: false,
-    damageMultiple: 1,
-    obsoleteTeamIds: null,
-    move: false,
-    source: 'qixun_pano',
-    panoId: `chess-${puzzle.id}`,
-    pan: false,
-    zoom: false,
-    vHeading: 0,
-    vZoom: 0,
-    vPitch: 0,
-  };
-}
-
-function normalizeEvalScore(score) {
-  if (typeof score !== 'number' || Number.isNaN(score)) return null;
-  return score;
-}
-
-async function analyzeChessPuzzle(puzzle) {
-  const cacheKey = String(puzzle.id || puzzle.fen);
-  if (chessEvalCache.has(cacheKey)) {
-    return chessEvalCache.get(cacheKey);
-  }
-
-  const analysis = await analyzeFenLocal({
-    fen: puzzle.fen,
-    depth: 18,
-    multipv: 99,
-    timeoutMs: Number(process.env.SF_TIMEOUT_MS || 60000),
-  });
-
-  const entries = Object.entries(analysis.evals || {})
-    .map(([move, score]) => ({
-      move: String(move).trim(),
-      score: normalizeEvalScore(Number(score)),
-    }))
-    .filter((item) => item.move && item.score !== null)
-    .sort((a, b) => (b.score ?? -Infinity) - (a.score ?? -Infinity));
-
-  const result = {
-    bestMove: analysis.bestmove || entries[0]?.move || '',
-    bestScore: entries[0]?.score ?? 0,
-    evals: Object.fromEntries(entries.map((item) => [item.move, item.score])),
-    orderedMoves: entries,
-  };
-  chessEvalCache.set(cacheKey, result);
-  return result;
-}
-
-function buildChessRoundResult({ round, userMove, bestMove, moveScore, bestScore, totalScore }) {
-  const cpDiff = Math.max(0, Number(bestScore || 0) - Number(moveScore || 0));
-  const score = Math.round(5000 * Math.exp(-cpDiff / 200));
-  return {
-    round,
-    score,
-    distance: cpDiff,
-    user: defaultChallengeProvider,
-    guessPlace: userMove,
-    targetPlace: bestMove,
-    bestMove,
-    userMove,
-    cpDiff,
-    bestScore,
-    moveScore,
-    totalScore,
-  };
-}
-
-function cloneRoundResults(roundResults) {
-  return roundResults.map((item) => ({ ...item }));
-}
-
-async function makeChessGameInfoFromSession(session) {
-  const rounds = session.puzzles.map((puzzle, index) => makeChessRound(puzzle, index));
-  const currentPuzzle = session.puzzles[session.currentRound] || null;
-  const currentFen = currentPuzzle?.fen || null;
-  const isFinished =
-    session.currentRound >= session.puzzles.length ||
-    (session.submitted && session.currentRound === session.puzzles.length - 1);
-  const analysis =
-    !isFinished && currentPuzzle ? await analyzeChessPuzzle(currentPuzzle) : null;
-  const legalMoves = analysis?.orderedMoves?.map((item) => item.move) || [];
-
-  return {
-    id: session.challengeId,
-    status: isFinished ? 'finish' : 'ongoing',
-    health: 10000,
-    type: 'daily_challenge',
-    challengeId: session.challengeId,
-    currentFen,
-    fen: currentFen,
-    player: {
-      totalScore: session.totalScore,
-      roundResults: cloneRoundResults(session.roundResults),
-      guesses: [],
-      lastRoundResult: session.lastRoundResult ? { ...session.lastRoundResult } : null,
-      user: session.userProfile || defaultChallengeProvider,
-    },
-    rounds,
-    currentRound: isFinished ? Math.max(0, session.puzzles.length - 1) : session.currentRound,
-    roundNumber: session.puzzles.length || 5,
-    roundTimePeriod: 150,
-    roundTimeGuessPeriod: 150,
-    timerStartTime: session.roundStartedAt,
-    startTimerPeriod: 0,
-    mapsName: '每日挑战-国际象棋',
-    mapsId: null,
-    teams: null,
-    playerIds: session.userId ? [session.userId] : null,
-    requestUserId: session.userId || null,
-    host: defaultChallengeProvider,
-    puzzleIds: session.puzzleIds,
-    chess: {
-      canSubmit: !session.submitted,
-      canNext: !!session.submitted && !isFinished,
-      submittedMove: session.submittedMove || null,
-      legalMoves,
-      bestMove: analysis?.bestMove || null,
-    },
-  };
-}
-
-async function getOrCreateChessSession({ challengeId, date, user }) {
-  let puzzles = await getDailyPuzzles(date);
-  if (puzzles.length === 0) {
-    await selectDailyPuzzles();
-    puzzles = await getDailyPuzzles(date);
-  }
-  const puzzleIds = await getDailyPuzzleIds(date);
-  const key = chessSessionKey(challengeId, user?.id);
-  const existing = chessChallengeSessions.get(key);
-
-  if (
-    existing &&
-    existing.date === date &&
-    JSON.stringify(existing.puzzleIds) === JSON.stringify(puzzleIds)
-  ) {
-    if (user) {
-      existing.userId = user.id;
-      existing.userProfile = toUserProfile(user);
-    }
-    return existing;
-  }
-
-  const session = {
-    challengeId,
-    date,
-    userId: user?.id || 0,
-    userProfile: user ? toUserProfile(user) : defaultChallengeProvider,
-    puzzleIds,
-    puzzles,
-    currentRound: 0,
-    totalScore: 0,
-    roundResults: [],
-    lastRoundResult: null,
-    submitted: false,
-    submittedMove: '',
-    roundStartedAt: Date.now(),
-  };
-  chessChallengeSessions.set(key, session);
-  return session;
-}
-
-async function makeChessChallengeGameInfo(challengeId, date) {
-  const session = await getOrCreateChessSession({ challengeId, date, user: null });
-  return await makeChessGameInfoFromSession(session);
-}
-
-function makeReadyGameInfo(type) {
-  const challengeId = getTodayChallengeId(type);
-  const mapsNameMap = {
-    gomoku: '每日挑战-五子棋',
-    xiangqi: '每日挑战-中国象棋',
-    chess: '每日挑战-国际象棋',
-    world: '每日挑战-全球',
-    china: '每日挑战-中国',
-  };
-  return {
-    id: challengeId,
-    status: 'ready',
-    health: 10000,
-    type: 'daily_challenge',
-    challengeId,
-    player: {
-      totalScore: 0,
-      roundResults: [],
-    },
-    rounds: [],
-    currentRound: null,
-    roundNumber: 5,
-    roundTimePeriod: null,
-    roundTimeGuessPeriod: null,
-    timerStartTime: null,
-    startTimerPeriod: null,
-    mapsName: mapsNameMap[type] || '每日挑战',
-    mapsId: null,
-    teams: null,
-    playerIds: null,
-    requestUserId: null,
-    host: defaultChallengeProvider,
-  };
 }
 
 app.get('/health', (_req, res) => res.json(ok({ status: 'ok' })));
@@ -469,6 +233,29 @@ app.get('/v0/qixun/user/getProfile', async (req, res) => {
   return res.json(ok(toUserProfile(rows[0])));
 });
 
+app.get('/v0/qixun/getProfile', async (req, res) => {
+  const userId = Number(req.query.userId || 0);
+  if (!userId) return res.json(fail('userId不能为空'));
+  const [rows] = await pool.query('SELECT * FROM users WHERE id = ? LIMIT 1', [userId]);
+  if (!rows[0]) return res.json(fail('用户不存在'));
+
+  return res.json(
+    ok({
+      userAO: toUserProfile(rows[0]),
+      chinaRank: toTypeRank(rows[0]),
+      worldRank: toTypeRank(rows[0]),
+    }),
+  );
+});
+
+app.get('/v0/qixun/getUserDailyActivity', async (_req, res) => {
+  return res.json(ok([]));
+});
+
+app.get('/v0/qixun/user/checkBan', async (_req, res) => {
+  return res.json(ok(false));
+});
+
 app.get('/v0/qixun/user/checkBind', requireUser, async (req, res) => {
   return res.json(
     ok({
@@ -484,7 +271,6 @@ app.get('/v0/qixun/activity/list', (_req, res) => {
   return res.json(
     ok({
       normalActivities: [
-        { title: '每日挑战', link: '/daily-challenge' },
         { title: '匹配', link: '/match' },
       ],
       specialActivities: [],
@@ -492,177 +278,62 @@ app.get('/v0/qixun/activity/list', (_req, res) => {
   );
 });
 
-app.get('/v0/qixun/challenge/getDailyChallengeId', (req, res) => {
-  const type = String(req.query.type || 'china');
-  return res.json(ok(getTodayChallengeId(type)));
-});
-
-app.get('/v0/qixun/challenge/getDailyChallengeInfo', (req, res) => {
-  const type = String(req.query.type || 'china');
-  return res.json(
-    ok({
-      challengeId: getTodayChallengeId(type),
-      provider: defaultChallengeProvider,
-    }),
-  );
-});
-
-app.get('/v0/qixun/challenge/rankTotal', (_req, res) => res.json(ok(0)));
-
-app.get('/v0/qixun/challenge/getGameInfo', async (req, res) => {
+app.post('/v0/qixun/gomoku/match/join', requireUser, async (req, res) => {
   try {
-    const challengeId = String(req.query.challengeId || '').trim();
-    if (challengeId) {
-      const parsed = parseDailyChallengeId(challengeId);
-      if (parsed?.type === 'chess') {
-        const sessionUser = await getSessionUser(req);
-        const session = await getOrCreateChessSession({
-          challengeId,
-          date: parsed.date,
-          user: sessionUser,
-        });
-        const gameInfo = await makeChessGameInfoFromSession(session);
-        return res.json(ok(gameInfo));
-      }
-    }
-
-    const type = String(req.query.type || 'china');
-    return res.json(ok(makeReadyGameInfo(type)));
+    const game = await joinMatch(pool, req.user.id);
+    return res.json(ok(game));
   } catch (err) {
-    return res.json(fail(`获取比赛信息失败: ${err.message}`));
+    return res.json(fail(`开始匹配失败: ${err.message}`));
   }
 });
 
-app.get('/v0/qixun/challenge/getDailyChallengeRank', (_req, res) => {
-  return res.json(
-    ok({
-      moreThan: null,
-      percent: null,
-      rank: null,
-      total: null,
-    }),
-  );
-});
-
-app.get('/v0/qixun/challenge/rankFriend', (_req, res) => {
-  return res.json(
-    ok({
-      rank: [],
-      total: 0,
-    }),
-  );
-});
-
-app.get('/v0/qixun/challenge/rankAll', (_req, res) => {
-  return res.json(
-    ok({
-      rank: [],
-      total: 0,
-    }),
-  );
-});
-
-app.get('/v0/qixun/challenge/start', async (req, res) => {
-  const gameId = String(req.query.gameId || '').trim();
-  if (!gameId) return res.json(fail('gameId不能为空'));
-  return res.json(
-    ok({
-      challengeId: gameId,
-    }),
-  );
-});
-
-app.post('/v0/qixun/chess/challenge/submit', requireUser, async (req, res) => {
+app.post('/v0/qixun/gomoku/match/cancel', requireUser, async (req, res) => {
   try {
-    const challengeId = String(req.body?.challengeId || req.query?.challengeId || '').trim();
-    const userMove = String(req.body?.userMove || req.query?.userMove || '').trim();
-    if (!challengeId) return res.json(fail('challengeId不能为空'));
-    if (!userMove) return res.json(fail('userMove不能为空'));
-
-    const parsed = parseDailyChallengeId(challengeId);
-    if (!parsed || parsed.type !== 'chess') return res.json(fail('不是国际象棋每日挑战'));
-
-    const session = await getOrCreateChessSession({
-      challengeId,
-      date: parsed.date,
-      user: req.user,
-    });
-
-    if (session.currentRound >= session.puzzles.length) {
-      return res.json(fail('本局已经完成'));
-    }
-    if (session.submitted) {
-      return res.json(fail('当前回合已提交，请先进入下一题'));
-    }
-
-    const currentPuzzle = session.puzzles[session.currentRound];
-    const analysis = await analyzeChessPuzzle(currentPuzzle);
-    const moveAnalysis = await analyzeFenLocal({
-      fen: currentPuzzle.fen,
-      depth: 18,
-      multipv: 1,
-      timeoutMs: Number(process.env.SF_TIMEOUT_MS || 60000),
-      searchMoves: [userMove],
-    });
-    const moveScore = moveAnalysis.evals[userMove];
-    if (moveScore === undefined) {
-      return res.json(fail('该走法无法评估，请确认是合法棋步'));
-    }
-
-    const roundResult = buildChessRoundResult({
-      round: session.currentRound + 1,
-      userMove,
-      bestMove: analysis.bestMove,
-      moveScore,
-      bestScore: analysis.bestScore,
-      totalScore: session.totalScore,
-    });
-
-    session.totalScore += roundResult.score;
-    roundResult.totalScore = session.totalScore;
-    session.roundResults.push(roundResult);
-    session.lastRoundResult = roundResult;
-    session.submitted = true;
-    session.submittedMove = userMove;
-
-    const gameInfo = await makeChessGameInfoFromSession(session);
-    return res.json(ok({ gameInfo, roundResult }));
+    const gameId = readParam(req, 'gameId');
+    if (!gameId) return res.json(fail('gameId不能为空'));
+    const removed = await cancelQueuedMatch(pool, req.user.id, gameId);
+    return res.json(ok(removed));
   } catch (err) {
-    return res.json(fail(`提交失败: ${err.message}`));
+    return res.json(fail(`取消匹配失败: ${err.message}`));
   }
 });
 
-app.post('/v0/qixun/chess/challenge/next', requireUser, async (req, res) => {
+app.get('/v0/qixun/gomoku/game/get', requireUser, async (req, res) => {
   try {
-    const challengeId = String(req.body?.challengeId || req.query?.challengeId || '').trim();
-    if (!challengeId) return res.json(fail('challengeId不能为空'));
-
-    const parsed = parseDailyChallengeId(challengeId);
-    if (!parsed || parsed.type !== 'chess') return res.json(fail('不是国际象棋每日挑战'));
-
-    const session = await getOrCreateChessSession({
-      challengeId,
-      date: parsed.date,
-      user: req.user,
-    });
-
-    if (!session.submitted) {
-      return res.json(fail('请先提交当前回合'));
-    }
-
-    if (session.currentRound < session.puzzles.length - 1) {
-      session.currentRound += 1;
-      session.submitted = false;
-      session.submittedMove = '';
-      session.roundStartedAt = Date.now();
-    } else {
-      session.currentRound = session.puzzles.length;
-    }
-
-    const gameInfo = await makeChessGameInfoFromSession(session);
-    return res.json(ok(gameInfo));
+    const gameId = readParam(req, 'gameId');
+    if (!gameId) return res.json(fail('gameId不能为空'));
+    const game = await getGameState(pool, gameId, req.user.id);
+    if (!game) return res.json(fail('对局不存在'));
+    return res.json(ok(game));
   } catch (err) {
-    return res.json(fail(`进入下一题失败: ${err.message}`));
+    return res.json(fail(`获取对局失败: ${err.message}`));
+  }
+});
+
+app.post('/v0/qixun/gomoku/game/move', requireUser, async (req, res) => {
+  try {
+    const gameId = readParam(req, 'gameId');
+    const x = Number(readParam(req, 'x'));
+    const y = Number(readParam(req, 'y'));
+    if (!gameId) return res.json(fail('gameId不能为空'));
+    if (!Number.isInteger(x) || !Number.isInteger(y)) {
+      return res.json(fail('x/y参数不合法'));
+    }
+    const game = await playMove(pool, gameId, req.user.id, x, y);
+    return res.json(ok(game));
+  } catch (err) {
+    return res.json(fail(`落子失败: ${err.message}`));
+  }
+});
+
+app.post('/v0/qixun/gomoku/game/analyze', requireUser, async (req, res) => {
+  try {
+    const gameId = String(req.query.gameId || '').trim();
+    if (!gameId) return res.json(fail('gameId不能为空'));
+    const game = await analyzeFinishedGame(pool, gameId, req.user.id);
+    return res.json(ok(game));
+  } catch (err) {
+    return res.json(fail(`复盘分析失败: ${err.message}`));
   }
 });
 
@@ -671,106 +342,14 @@ app.get('/v0/qixun/vip/check', (_req, res) => res.json(ok(null)));
 app.get('/v0/qixun/vip/checkIsVip', (_req, res) => res.json(ok(false)));
 app.get('/v0/qixun/solo/listEmojis', (_req, res) => res.json(ok([])));
 
-// ========== 国际象棋题库接口 ==========
-
-/**
- * 获取今日国际象棋题目列表
- */
-app.get('/v0/qixun/chess/puzzles/daily', async (req, res) => {
-  try {
-    const puzzles = await getDailyPuzzles();
-    return res.json(
-      ok({
-        puzzles: puzzles.map((p) => ({
-          id: p.id,
-          fen: p.fen,
-        })),
-        timePerPuzzle: 150, // 2:30秒
-      })
-    );
-  } catch (err) {
-    return res.json(fail(`获取题目失败: ${err.message}`));
-  }
-});
-
-/**
- * 获取单个题目详情
- */
-app.get('/v0/qixun/chess/puzzles/:puzzleId', async (req, res) => {
-  try {
-    const puzzleId = Number(req.params.puzzleId);
-    const [rows] = await pool.query(
-      'SELECT id, fen FROM chess_puzzles WHERE id = ?',
-      [puzzleId]
-    );
-
-    if (rows.length === 0) {
-      return res.json(fail('题目不存在'));
-    }
-
-    const p = rows[0];
-    return res.json(
-      ok({
-        id: p.id,
-        fen: p.fen,
-      })
-    );
-  } catch (err) {
-    return res.json(fail(`获取题目失败: ${err.message}`));
-  }
-});
-
-/**
- * 提交答案并获得评分
- * POST { puzzleId, userMove, timeUsed }
- */
-app.post('/v0/qixun/chess/puzzles/answer', async (req, res) => {
-  try {
-    return res.json(fail('当前仅存储题目(FEN)，未启用答案判定', 501));
-  } catch (err) {
-    return res.json(fail(`答题检查失败: ${err.message}`));
-  }
-});
-
-/**
- * 本地 Stockfish(exe) 分析
- * POST { fen: string, depth?: number, timeoutMs?: number }
- */
-app.post('/v0/qixun/chess/local/analyze', async (req, res) => {
-  try {
-    const fen = String(req.body?.fen || '').trim();
-    const depth = Number(req.body?.depth || 18);
-    const timeoutMs = Number(req.body?.timeoutMs || 20000);
-    const multipv = Number(req.body?.multipv || 2);
-    if (!fen) return res.json(fail('fen不能为空'));
-
-    const data = await analyzeFenLocal({ fen, depth, timeoutMs, multipv });
-    return res.json(ok(data));
-  } catch (err) {
-    return res.json(fail(`本地分析失败: ${err.message}`));
-  }
-});
-
-app.get('/v0/qixun/chess/local/health', (_req, res) => {
-  const exePath = findExePath();
-  return res.json(ok({ exePath, ready: !!exePath }));
-});
-
 async function start() {
   await initDb();
+  await ensureMatchTables(pool);
   
   // 清理过期会话
   setInterval(() => {
     pool.query('DELETE FROM user_sessions WHERE expires_at <= NOW()').catch(() => {});
   }, 10 * 60 * 1000).unref();
-
-  // 启动每日题目选择定时任务
-  try {
-    scheduleDaily();
-    console.log('已启动每日题目选择任务');
-  } catch (err) {
-    console.error('启动定时任务失败:', err);
-  }
 
   app.listen(port, () => {
     console.log(`qixun-api listening on :${port}`);

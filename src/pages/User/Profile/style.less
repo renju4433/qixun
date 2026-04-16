@@ -1,56 +1,94 @@
-.wrapper {
-  .header {
-    Button {
-      font-size: 12px;
+.page {
+  min-height: 100vh;
+  background-color: #090723;
+}
+
+.container {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  padding: 120px 0;
+}
+
+.panel {
+  background: #395f8bdd;
+  border: none;
+  border-radius: 20px;
+
+  :global {
+    .ant-card-head,
+    .ant-card-body,
+    .ant-descriptions-item-label,
+    .ant-descriptions-item-content,
+    .ant-statistic-title,
+    .ant-statistic-content {
+      color: #fff;
+    }
+  }
+}
+
+.hero {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.heroInfo {
+  color: #fff;
+}
+
+.nameRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+
+  h1 {
+    margin: 0;
+    color: #fff;
+    font-size: 32px;
+    line-height: 1.2;
+  }
+}
+
+.uid {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 14px;
+}
+
+.uid {
+  margin-bottom: 6px;
+}
+
+.section {
+  margin-top: 16px;
+}
+
+.rankGrid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.rankGrid :global(.ant-statistic) {
+  text-align: center;
+}
+
+@media only screen and (max-width: 679px) {
+  .nameRow {
+    h1 {
+      font-size: 26px;
     }
   }
 
-  .grid {
-    display: grid;
-    grid-gap: 1.5rem;
-    grid-template-columns: repeat(3, 1fr);
-  }
-
-  .main {
-    .title {
-      font-size: 20px;
-      .rank {
-        margin-left: 8px;
-        font-size: 12px;
-      }
-    }
-
-    .point {
-      .grid {
-        display: grid;
-        grid-gap: 1rem;
-        grid-template-columns: repeat(5, 1fr);
-        margin-top: 1rem;
-
-        .cell {
-          text-align: center;
-          .name {
-            font-size: 12px;
-          }
-          .number {
-            font-size: 18px;
-          }
-        }
-      }
-    }
-  }
-
-  @media only screen and (max-width: 679px) {
-    .main {
-      .point {
-        .grid {
-          grid-template-columns: repeat(3, 1fr);
-        }
-      }
-    }
-
-    .grid {
-      grid-template-columns: repeat(1, 1fr);
-    }
+  .rankGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

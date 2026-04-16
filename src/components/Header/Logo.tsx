@@ -1,8 +1,6 @@
-import { qixunGoback, qixunGoHome } from '@/utils/HisotryUtils';
+import { history } from '@@/core/history';
 import { ArrowLeftOutlined } from '@ant-design/icons';
-import { useModel } from '@umijs/max';
 import { Button } from 'antd';
-import { FC } from 'react';
 import styles from './style.less';
 
 type HeaderLogoProps = {
@@ -10,49 +8,32 @@ type HeaderLogoProps = {
   canBack?: boolean;
 };
 
-export function checkCanBack(): boolean {
-  console.log(history.state);
-  return (
-    history &&
-    history.state &&
-    history.state.idx !== null &&
-    history.state.idx !== undefined &&
-    history.state.idx > 0
-  );
-}
-
-const HeaderLogo: FC<HeaderLogoProps> = ({
-  className = '',
-  canBack: canBack,
-}) => {
-  const { isInApp } = useModel('@@initialState', (model) => ({
-    isInApp: model.initialState?.isInApp,
-  }));
+const HeaderLogo = ({ className = '', canBack = false }: HeaderLogoProps) => {
+  const canGoBack =
+    typeof window !== 'undefined' &&
+    window.history &&
+    window.history.state &&
+    window.history.state.idx !== null &&
+    window.history.state.idx !== undefined &&
+    window.history.state.idx > 0;
 
   return (
-    <div
-      className={`${styles.navigate} ${className} ${
-        isInApp ? styles.appNavigate : ''
-      }`}
-    >
-      {canBack && (checkCanBack() || isInApp) && (
+    <div className={`${styles.navigate} ${className}`}>
+      {canBack && canGoBack && (
         <Button
           className={styles.backBtn}
           icon={<ArrowLeftOutlined />}
-          onClick={() => {
-            qixunGoback('/');
-          }}
+          onClick={() => history.back()}
           size="large"
         />
       )}
       <div
         className={styles.logo}
         onClick={() => {
-          qixunGoHome();
+          history.push('/');
         }}
       >
         <span className={styles.logoText}>棋寻</span>
-        {/*<sup>新版</sup>*/}
       </div>
     </div>
   );

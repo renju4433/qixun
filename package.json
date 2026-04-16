@@ -33,6 +33,7 @@
     "antd": "^5.9.0",
     "bignumber.js": "^9.1.2",
     "canvas-confetti": "^1.9.0",
+    "chess.js": "^1.4.0",
     "copy-to-clipboard": "^3.3.3",
     "dayjs": "^1.11.9",
     "emoji-mart": "^5.5.2",

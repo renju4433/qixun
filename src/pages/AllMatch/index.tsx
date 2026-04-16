@@ -1,322 +1,292 @@
-import init from '@/components/Admin/Init';
-import Tips from '@/components/Match/Tips';
-import PointHint from '@/components/Point/PointHint';
-import WarningChecker from '@/components/TimeChekcer';
-import NormalPage from '@/pages/NormalPage';
+import Header from '@/components/Header';
+import GomokuBoard from '@/components/Gomoku/Board';
 import {
-  checkMatchOpenRequest,
-  startChinaMatching,
-  startWorldMoveMatching,
-  startWorldNoMoveMatching,
-  startWorldNpmzMatching,
+  analyzeGomokuGame,
+  cancelGomokuMatch,
+  getGomokuGame,
+  joinGomokuMatch,
+  playGomokuMove,
 } from '@/services/api';
-import { history, useModel, useNavigate } from '@@/exports';
-import { Alert, Button, Flex, Spin, Tabs, Typography } from 'antd';
-import { useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import TeamMatch from './TeamMatch';
-const { Text } = Typography;
+import { history, useModel } from '@@/exports';
+import { Alert, Button, Card, Flex, List, Spin, Statistic, Tag, message } from 'antd';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import styles from './style.less';
+
+type GomokuPlayer = {
+  userId: number;
+  userName: string;
+  icon?: string;
+};
+
+type GomokuMove = {
+  moveIndex: number;
+  x: number;
+  y: number;
+  color: number;
+};
+
+type GomokuAnalysisMove = {
+  moveIndex: number;
+  color: number;
+  played: string;
+  best: string | null;
+  evalText: string | null;
+  isMistake: boolean;
+};
+
+type GomokuGame = {
+  id: string;
+  status: 'queued' | 'ongoing' | 'finished';
+  boardSize: number;
+  currentTurn: number;
+  winnerColor: number | null;
+  blackUser: GomokuPlayer | null;
+  whiteUser: GomokuPlayer | null;
+  viewerColor: number | null;
+  canMove: boolean;
+  moves: GomokuMove[];
+  winLine: { x: number; y: number }[] | null;
+  analysis?: {
+    blackMistakes: number;
+    whiteMistakes: number;
+    moves: GomokuAnalysisMove[];
+  } | null;
+};
+
+const COLOR_TEXT: Record<number, string> = {
+  0: '和棋',
+  1: '黑方',
+  2: '白方',
+};
 
 const AllMatch = () => {
   const { user } = useModel('@@initialState', (model) => ({
     user: model.initialState?.user,
   }));
 
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [game, setGame] = useState<GomokuGame | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
+  const pollingRef = useRef<number | null>(null);
 
-  const initialTab = searchParams.get('tab') || 'team';
-  const [activeTab, setActiveTab] = useState<string>(initialTab);
-
-  // 全球积分匹配状态
-  const [worldMatching, setWorldMatching] = useState<boolean>(false);
-  const [worldMatchingType, setWorldMatchingType] = useState<string>();
-  const [matchOpen, setMatchOpen] = useState<boolean>(false);
-  const worldTimer = useRef<number | null>(null);
-
-  // 中国积分匹配状态
-  const [chinaMatching, setChinaMatching] = useState<boolean>(false);
-  const chinaTimer = useRef<number | null>(null);
-
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    init();
-    checkOpen();
-
-    // 自动开始匹配：如果 URL 有 from 参数
-    const from = searchParams.get('from');
-    const tab = searchParams.get('tab');
-
-    if (from && tab) {
-      setTimeout(() => {
-        if (tab === 'china') {
-          startChinaMatchingFn();
-        } else if (tab === 'world') {
-          startWorldMatching(from);
-        }
-      }, 200);
+  const statusText = useMemo(() => {
+    if (!game) return '未开始匹配';
+    if (game.status === 'queued') return '正在等待对手';
+    if (game.status === 'ongoing') {
+      return game.canMove ? '轮到你落子' : '等待对手落子';
     }
-  }, []);
+    return game.winnerColor === 0
+      ? '对局结束，和棋'
+      : `对局结束，${COLOR_TEXT[game.winnerColor || 0]}胜`;
+  }, [game]);
 
-  const checkOpenTimer = useRef<number | null>(null);
-
-  const checkOpen = () => {
-    checkMatchOpenRequest().then((res) => {
-      if (res.success) setMatchOpen(res.data);
-    });
-    checkOpenTimer.current = window.setInterval(() => {
-      checkMatchOpenRequest().then((res) => {
-        if (res.success) setMatchOpen(res.data);
-      });
-    }, 10000);
-  };
-
-  // 清理 URL 中的 from 参数
-  const clearFromParam = () => {
-    const newSearchParams = new URLSearchParams(searchParams);
-    if (newSearchParams.has('from')) {
-      newSearchParams.delete('from');
-      setSearchParams(newSearchParams, { replace: true });
+  const refreshGame = async (gameId: string) => {
+    const res = await getGomokuGame({ gameId }, { skipErrorHandler: true });
+    if (res.success && res.data) {
+      setGame(res.data);
     }
-  };
-
-  // ===== 全球积分匹配 =====
-  const cleanWorldTimer = () => {
-    setWorldMatching(false);
-    if (worldTimer.current) window.clearInterval(worldTimer.current);
-  };
-
-  // 用户手动取消匹配
-  const cancelWorldMatching = () => {
-    cleanWorldTimer();
-    clearFromParam();
-  };
-
-  const worldMatchApi = {
-    move: startWorldMoveMatching,
-    noMove: startWorldNoMoveMatching,
-    npmz: startWorldNpmzMatching,
-  };
-
-  const worldTypeNames: Record<string, string> = {
-    move: '移动',
-    noMove: '固定',
-    npmz: '固定视角',
-  };
-
-  const startWorldMatching = (type: string) => {
-    if (!user) {
-      history.push('/user/login');
-      return;
-    }
-    cleanWorldTimer();
-    setWorldMatching(true);
-    setWorldMatchingType(type);
-
-    const api = worldMatchApi[type as keyof typeof worldMatchApi];
-    if (!api) return;
-
-    worldTimer.current = window.setInterval(() => {
-      api({ interval: 1500 }).then((res) => {
-        if (res.success && res.data) {
-          cleanWorldTimer();
-          history.push('/solo/' + res.data);
-        }
-      });
-    }, 1500);
-  };
-
-  // ===== 中国积分匹配 =====
-  const cleanChinaTimer = () => {
-    setChinaMatching(false);
-    if (chinaTimer.current) window.clearInterval(chinaTimer.current);
-  };
-
-  // 用户手动取消匹配
-  const cancelChinaMatching = () => {
-    cleanChinaTimer();
-    clearFromParam();
-  };
-
-  const startChinaMatchingFn = () => {
-    if (!user) {
-      history.push('/user/login');
-      return;
-    }
-    cleanChinaTimer();
-    setChinaMatching(true);
-    chinaTimer.current = window.setInterval(() => {
-      startChinaMatching({ interval: 1500 }).then((res) => {
-        if (res.success && res.data) {
-          cleanChinaTimer();
-          history.push('/solo/' + res.data);
-        }
-      });
-    }, 1500);
   };
 
   useEffect(() => {
+    if (!game?.id || !['queued', 'ongoing'].includes(game.status)) {
+      if (pollingRef.current) window.clearInterval(pollingRef.current);
+      pollingRef.current = null;
+      return;
+    }
+
+    pollingRef.current = window.setInterval(() => {
+      refreshGame(game.id).catch(() => { });
+    }, 1500);
+
     return () => {
-      cleanWorldTimer();
-      cleanChinaTimer();
-      if (checkOpenTimer.current) window.clearInterval(checkOpenTimer.current);
+      if (pollingRef.current) window.clearInterval(pollingRef.current);
+      pollingRef.current = null;
     };
-  }, []);
+  }, [game?.id, game?.status]);
 
-  // 处理 tab 切换，更新 URL 参数
-  const handleTabChange = (key: string) => {
-    setActiveTab(key);
-    const newSearchParams = new URLSearchParams(searchParams);
-    newSearchParams.set('tab', key);
-    setSearchParams(newSearchParams, { replace: true });
+  const startMatch = async () => {
+    if (!user?.userId) {
+      history.push('/user/login?redirect=/match');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await joinGomokuMatch();
+      if (res.success && res.data) {
+        setGame(res.data);
+      } else {
+        message.error(res.errorMessage || '匹配失败');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const items = [
-    {
-      key: 'team',
-      label: '娱乐/组队',
-      children: <TeamMatch />,
-    },
-    {
-      key: 'china',
-      label: '中国积分',
-      children: (
-        <Flex gap="2rem" style={{ textAlign: 'center' }} vertical>
-          <Flex gap="middle" vertical>
-            <Alert
-              type="warning"
-              message={
-                <>
-                  在积分赛事中搜索题中信息/查询手机号归属地均属
-                  <a
-                    href="https://www.yuque.com/chaofun/qixun/rules"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    作弊行为
-                  </a>
-                </>
-              }
-            />
-            <PointHint />
-            <Text type="secondary">
-              有一处莫斯科街景作为平衡点 用以均衡题目得分
-            </Text>
-            <WarningChecker />
-          </Flex>
+  const cancelMatch = async () => {
+    if (!game?.id) return;
+    setLoading(true);
+    try {
+      const res = await cancelGomokuMatch({ gameId: game.id });
+      if (res.success) {
+        setGame(null);
+      } else {
+        message.error(res.errorMessage || '取消失败');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
-          {chinaMatching ? (
-            <Flex align="center" gap="middle" vertical>
-              <Spin size="large" />
-              <Tips />
-              <Text type="warning">正在匹配</Text>
-              <Button onClick={cancelChinaMatching}>结束匹配</Button>
-            </Flex>
-          ) : (
-            <Flex align="center" gap="2rem" vertical>
-              <Button size="large" onClick={startChinaMatchingFn}>
-                开始匹配
-              </Button>
-              <Button
-                size="large"
-                onClick={() => navigate('/point-rank?type=china')}
-              >
-                积分排行
-              </Button>
-            </Flex>
-          )}
-        </Flex>
-      ),
-    },
-    {
-      key: 'world',
-      label: '全球积分',
-      children: (
-        <Flex gap="2rem" style={{ textAlign: 'center' }} vertical>
-          <Flex gap="middle" vertical>
-            <Alert
-              type="warning"
-              message={
-                <>
-                  在积分赛事中搜索题中信息属于
-                  <a
-                    href="https://www.yuque.com/chaofun/qixun/rules"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    作弊行为
-                  </a>
-                </>
-              }
-            />
-            <PointHint />
-            <WarningChecker />
-          </Flex>
+  const handlePlay = async (x: number, y: number) => {
+    if (!game?.id || !game.canMove || playing) return;
+    setPlaying(true);
+    try {
+      const res = await playGomokuMove({ gameId: game.id, x, y });
+      if (res.success && res.data) {
+        setGame(res.data);
+      } else {
+        message.error(res.errorMessage || '落子失败');
+      }
+    } finally {
+      setPlaying(false);
+    }
+  };
 
-          {worldMatching ? (
-            <Flex align="center" gap="middle" vertical>
-              <Spin size="large" />
-              <Tips />
-              <Text type="warning">
-                正在{worldTypeNames[worldMatchingType || '']}匹配
-              </Text>
-              <Button onClick={cancelWorldMatching}>结束匹配</Button>
-            </Flex>
-          ) : (
-            <Flex align="center" gap="2rem" vertical>
-              <Button size="large" onClick={() => history.push('/point')}>
-                积分赛
-              </Button>
-              <Button size="large" onClick={() => startWorldMatching('noMove')}>
-                固定匹配
-              </Button>
-              <Flex align="center" vertical>
-                <Button
-                  disabled={!matchOpen}
-                  size="large"
-                  onClick={() => startWorldMatching('move')}
-                >
-                  移动匹配
-                </Button>
-                <Text type="secondary" style={{ fontSize: 12 }}>
-                  周六日晚20:00-22:00点开启
-                </Text>
-              </Flex>
-              <Flex align="center" vertical>
-                <Button
-                  disabled={!matchOpen}
-                  size="large"
-                  onClick={() => startWorldMatching('npmz')}
-                >
-                  固定视角匹配
-                </Button>
-                <Text type="secondary" style={{ fontSize: 12 }}>
-                  周六日晚20:00-22:00点开启
-                </Text>
-              </Flex>
-              <Button
-                size="large"
-                onClick={() => navigate('/point-rank?type=world')}
-              >
-                积分排行
-              </Button>
-            </Flex>
-          )}
-        </Flex>
-      ),
-    },
-  ];
+  const handleAnalyze = async () => {
+    if (!game?.id) return;
+    setAnalyzing(true);
+    try {
+      const res = await analyzeGomokuGame({ gameId: game.id });
+      if (res.success && res.data) {
+        setGame(res.data);
+      } else {
+        message.error(res.errorMessage || '复盘分析失败');
+      }
+    } finally {
+      setAnalyzing(false);
+    }
+  };
 
   return (
-    <NormalPage title="匹配" desc="">
-      <Tabs
-        activeKey={activeTab}
-        onChange={handleTabChange}
-        items={items}
-        centered
-        size="large"
-      />
-    </NormalPage>
+    <div className={styles.page}>
+      <div style={{ marginTop: 10 }}>
+        <Header canBack={true} />
+      </div>
+      <div className={styles.container}>
+        <div className={styles.hero}>
+          <h1>匹配</h1>
+        </div>
+
+        {!game && (
+          <Card className={styles.panel}>
+            <Flex vertical gap={16} align="center">
+              <Button type="primary" size="large" loading={loading} onClick={startMatch}>
+                开始匹配
+              </Button>
+            </Flex>
+          </Card>
+        )}
+
+        {game && (
+          <div className={styles.gameLayout}>
+            <div className={styles.left}>
+              <Card className={styles.panel}>
+                <Flex vertical gap={16}>
+                  <Flex
+                    justify="center"
+                    align="center"
+                    wrap="wrap"
+                    gap={12}
+                    className={styles.statusBar}
+                  >
+                    <Tag color={game.status === 'finished' ? 'gold' : 'blue'}>{statusText}</Tag>
+                    {game.status === 'queued' && (
+                      <Button onClick={cancelMatch} loading={loading}>
+                        取消匹配
+                      </Button>
+                    )}
+                    {game.status === 'finished' && (
+                      <Button type="primary" onClick={handleAnalyze} loading={analyzing}>
+                        引擎复盘
+                      </Button>
+                    )}
+                  </Flex>
+
+                  <Flex className={styles.players} gap={12}>
+                    <Card size="small" className={styles.playerCard}>
+                      <div className={styles.playerTitle}>黑方</div>
+                      <div>{game.blackUser?.userName || '等待匹配中'}</div>
+                    </Card>
+                    <Card size="small" className={styles.playerCard}>
+                      <div className={styles.playerTitle}>白方</div>
+                      <div>{game.whiteUser?.userName || '等待匹配中'}</div>
+                    </Card>
+                  </Flex>
+
+                  <GomokuBoard
+                    moves={game.moves}
+                    canPlay={game.canMove && !playing}
+                    onPlay={handlePlay}
+                    winLine={game.winLine}
+                  />
+                </Flex>
+              </Card>
+            </div>
+
+            <div className={styles.right}>
+              <Card className={styles.panel}>
+                <Flex vertical gap={12} className={styles.statsBlock}>
+                  <Statistic title="总手数" value={game.moves.length} />
+                  <Statistic
+                    title="你的颜色"
+                    value={game.viewerColor ? COLOR_TEXT[game.viewerColor] : '观战'}
+                  />
+                  <Statistic
+                    title="当前轮次"
+                    value={COLOR_TEXT[game.currentTurn] || '-'}
+                  />
+                </Flex>
+              </Card>
+
+              {game.analysis && (
+                <Card className={styles.panel} title="赛后复盘">
+                  <Flex gap={12} className={styles.summary}>
+                    <Statistic title="黑方错着数" value={game.analysis.blackMistakes} />
+                    <Statistic title="白方错着数" value={game.analysis.whiteMistakes} />
+                  </Flex>
+                  <List
+                    size="small"
+                    dataSource={game.analysis.moves}
+                    renderItem={(item) => (
+                      <List.Item>
+                        <div className={styles.analysisRow}>
+                          <span>
+                            第 {item.moveIndex} 手 {item.color === 1 ? '黑' : '白'}:
+                            {item.played}
+                          </span>
+                          <span>最优 {item.best || '-'}</span>
+                          <span>{item.evalText || '-'}</span>
+                          <Tag color={item.isMistake ? 'red' : 'green'}>
+                            {item.isMistake ? '错着' : '正常'}
+                          </Tag>
+                        </div>
+                      </List.Item>
+                    )}
+                  />
+                </Card>
+              )}
+            </div>
+          </div>
+        )}
+
+        {(loading || playing) && (
+          <div className={styles.loadingMask}>
+            <Spin />
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 

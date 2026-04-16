@@ -1890,30 +1890,6 @@ export async function nextRound(
   });
 }
 
-export async function submitChessChallenge(
-  params: { challengeId: string; userMove: string },
-  options?: Record<string, any>,
-): Promise<API.Result<{ gameInfo: API.GameInfo; roundResult: any }>> {
-  return request<API.Result<{ gameInfo: API.GameInfo; roundResult: any }>>(
-    '/v0/qixun/chess/challenge/submit',
-    {
-      method: 'POST',
-      data: params,
-      ...(options || {}),
-    },
-  );
-}
-
-export async function nextChessChallenge(
-  params: { challengeId: string },
-  options?: Record<string, any>,
-): Promise<API.Result<API.GameInfo>> {
-  return request<API.Result<API.GameInfo>>('/v0/qixun/chess/challenge/next', {
-    method: 'POST',
-    data: params,
-    ...(options || {}),
-  });
-}
 
 /**
  * 获取派对信息
@@ -3819,6 +3795,59 @@ export async function getTips(
 ): Promise<API.Result<API.TipInfo>> {
   return request<API.Result<API.TipInfo>>('/v0/qixun/tips/get', {
     method: 'GET',
+    ...(options || {}),
+  });
+}
+
+export async function joinGomokuMatch(
+  options?: Record<string, any>,
+): Promise<API.Result<any>> {
+  return request<API.Result<any>>('/v0/qixun/gomoku/match/join', {
+    method: 'POST',
+    ...(options || {}),
+  });
+}
+
+export async function cancelGomokuMatch(
+  data: { gameId: string },
+  options?: Record<string, any>,
+): Promise<API.Result<boolean>> {
+  return request<API.Result<boolean>>('/v0/qixun/gomoku/match/cancel', {
+    method: 'POST',
+    data,
+    ...(options || {}),
+  });
+}
+
+export async function getGomokuGame(
+  params: { gameId: string },
+  options?: Record<string, any>,
+): Promise<API.Result<any>> {
+  return request<API.Result<any>>('/v0/qixun/gomoku/game/get', {
+    method: 'GET',
+    params,
+    ...(options || {}),
+  });
+}
+
+export async function playGomokuMove(
+  data: { gameId: string; x: number; y: number },
+  options?: Record<string, any>,
+): Promise<API.Result<any>> {
+  return request<API.Result<any>>('/v0/qixun/gomoku/game/move', {
+    method: 'POST',
+    data,
+    ...(options || {}),
+  });
+}
+
+export async function analyzeGomokuGame(
+  data: { gameId: string },
+  options?: Record<string, any>,
+): Promise<API.Result<any>> {
+  return request<API.Result<any>>('/v0/qixun/gomoku/game/analyze', {
+    method: 'POST',
+    params: data,
     ...(options || {}),
   });
 }

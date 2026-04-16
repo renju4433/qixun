@@ -1,59 +1,145 @@
+.page {
+  min-height: 100vh;
+  background-color: #090723;
+}
+
 .container {
-  padding: 0.25rem 0 1rem;
-  
-  :global {
-    .ant-tabs-nav {
-      margin-bottom: 2rem;
-    }
-    
-    .ant-tabs-tab {
-      font-size: 16px;
-      font-weight: 500;
-    }
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+
+.hero {
+  margin-bottom: 20px;
+  color: #fff;
+  text-align: center;
+
+  h1 {
+    margin-bottom: 8px;
+    font-size: 32px;
+    line-height: 1.2;
+  }
+
+  p {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 14px;
   }
 }
 
-.buttons {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.5rem;
-  margin-bottom: 2rem;
+.gameLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(320px, 0.9fr);
+  gap: 20px;
+  align-items: start;
 }
 
-.center {
+.left,
+.right {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-  margin: 2rem 0;
+  gap: 20px;
 }
 
-.userIcons {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 1rem;
-  margin-top: 2rem;
-}
+.panel {
+  background: #395f8bdd;
+  border: none;
+  border-radius: 20px;
 
-.user {
-  cursor: pointer;
-  transition: transform 0.2s;
-  
-  &:hover {
-    transform: scale(1.05);
+  :global {
+    .ant-card-body,
+    .ant-card-head {
+      color: #fff;
+    }
+
+    .ant-statistic {
+      .ant-statistic-title,
+      .ant-statistic-content {
+        color: #fff;
+      }
+    }
+
+    .ant-list-item {
+      border-block-end-color: rgba(255, 255, 255, 0.12) !important;
+    }
   }
 }
 
-.codeWrapper {
-  padding: 1rem 0;
+.players {
+  width: 100%;
+  text-align: center;
 }
 
-.code {
-  font-size: 24px;
-  font-weight: bold;
-  letter-spacing: 4px;
-  margin-bottom: 0.5rem;
+.playerCard {
+  flex: 1 1 0;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #fff;
+
+  :global {
+    .ant-card-body {
+      text-align: center;
+    }
+  }
 }
 
+.playerTitle {
+  margin-bottom: 8px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.summary {
+  margin-bottom: 12px;
+  justify-content: center;
+  text-align: center;
+}
+
+.analysisRow {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1.4fr 0.8fr 0.8fr auto;
+  gap: 8px;
+  align-items: center;
+  color: #fff;
+}
+
+.statusBar {
+  justify-content: center;
+  text-align: center;
+}
+
+.statsBlock {
+  text-align: center;
+}
+
+.statsBlock :global(.ant-statistic) {
+  text-align: center;
+}
+
+.loadingMask {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+@media only screen and (max-width: 960px) {
+  .gameLayout {
+    grid-template-columns: 1fr;
+  }
+
+  .hero {
+    h1 {
+      font-size: 32px;
+    }
+  }
+
+  .analysisRow {
+    grid-template-columns: 1fr;
+  }
+}
