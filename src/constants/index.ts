@@ -22,12 +22,15 @@ export const CFBizUri = 'https://b68v.daai.fun/';
 // 获取环境
 export const apiEnv = process.env.API_ENV;
 export const appEnv = process.env.REACT_APP_ENV;
+const isLocalHost =
+  typeof window !== 'undefined' &&
+  ['localhost', '127.0.0.1'].includes(window.location.hostname);
 
 // API基础地址
 export const baseURL =
-  !apiEnv || apiEnv === 'local' ? '/api' : 'https://saiyuan.top/api';
+  isLocalHost || !apiEnv || apiEnv === 'local' ? '/api' : 'https://saiyuan.top/api';
 export const baseWSURL =
-  !apiEnv || apiEnv === 'local'
+  isLocalHost || !apiEnv || apiEnv === 'local'
     ? `ws://${window.location.host}/ws`
     : 'wss://saiyuan.top/ws';
 
