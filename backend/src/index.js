@@ -18,7 +18,7 @@ const {
 } = require('./gomoku-match-service');
 
 const app = express();
-const port = Number(process.env.PORT || 3002);
+const port = Number(process.env.PORT || 3003);
 
 const corsOrigins = (process.env.CORS_ORIGIN || 'https://saiyuan.top')
   .split(',')
